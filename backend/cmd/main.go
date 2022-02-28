@@ -4,14 +4,28 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"github.com/winchien/moneyKeeper/backend/cmd/datamodel"
 	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler"
+	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler/account"
 )
+
+func init() {
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.JSONFormatter{})
+
+	// Output to stdout instead of the default stderr
+	// Can be any io.Writer, see below for File example
+	log.SetOutput(os.Stdout)
+
+	// Only log the warning severity or above.
+	log.SetLevel(log.InfoLevel)
+}
 
 var DBConnection *sql.DB
 
@@ -27,32 +41,44 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func accountHandler(w http.ResponseWriter, r *http.Request) {
-
 	switch r.Method {
 	case "GET":
-		// Fake account
-		fakeAcc := datamodel.Account{
-			AccountID:   1,
-			TypeID:      1,
-			Name:        "MyFakeAccount",
-			Description: "",
-			Active:      true,
-		}
 
-		j, _ := json.Marshal(fakeAcc)
-		w.Write(j)
+		accounts, err := account.GetAllAccounts(DBConnection)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, "{\"message\": \"Something bad happened!\"", http.StatusInternalServerError)
+		}
+		if len(accounts) == 0 {
+			log.Info("No rows were returned!")
+			w.Write([]byte("[]"))
+			return
+		}
+		accountsStr, _ := json.Marshal(accounts)
+		log.WithField("accounts", accounts).Info("accounts...")
+		w.Write(accountsStr)
+
 	case "POST":
 		// Decode the JSON in the body and overwrite 'tom' with it
 		d := json.NewDecoder(r.Body)
-		p := &datamodel.Account{}
-		err := d.Decode(p)
+		p := datamodel.Account{}
+		err := d.Decode(&p)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
-		// tom := p
+
+		p, err = account.AddAccount(DBConnection, p)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		resultDb, err := json.Marshal(p)
+		if err != nil {
+			log.WithError(err).Error(err.Error())
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		}
+		w.Write([]byte(resultDb))
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "I can't do that.")
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 	}
 }
 

@@ -45,3 +45,6 @@ Thumbs.db
 *.flv
 *.mov
 *.wmv
+
+# db files
+datadir/

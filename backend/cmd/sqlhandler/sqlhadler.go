@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"io/ioutil"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
+	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -41,7 +41,8 @@ func DBConnect() *sql.DB {
 
 	db, err := sql.Open(c.DbType, c.DbUser+":"+c.DbPassword+"@"+c.DbProtocol+"("+c.DbHost+":"+fmt.Sprint(c.DBPort)+")/"+c.DbName)
 	if err != nil {
-		panic(err.Error())
+		log.WithError(err).Error("Could not open connection to the DB")
+		panic(err)
 	}
 	return db
 }
