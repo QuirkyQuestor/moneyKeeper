@@ -19,5 +19,5 @@ CREATE TABLE category (
     parentId BIGINT UNSIGNED NOT NULL,
     name VARCHAR(40) CHARACTER SET utf8,
     description VARCHAR(200) CHARACTER SET utf8,
-    Expence BOOLEAN
+    expence BOOLEAN
 );
