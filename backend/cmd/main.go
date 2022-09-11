@@ -3,9 +3,9 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -36,20 +36,21 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		w.Write([]byte("Welcome to MoneyKeeper"))
+		return
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "I can't do that.")
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+		return
 	}
 }
 
 func accountHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-
 		accounts, err := account.GetAllAccounts(DBConnection)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			http.Error(w, "{\"message\": \"Something bad happened!\"", http.StatusInternalServerError)
+			log.WithError(err).Error("An error has happened during GetAllAccounts DB query")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 		if len(accounts) == 0 {
 			log.Info("No rows were returned!")
@@ -61,26 +62,31 @@ func accountHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write(accountsStr)
 
 	case "POST":
-		// Decode the JSON in the body and overwrite 'tom' with it
 		d := json.NewDecoder(r.Body)
 		p := datamodel.Account{}
 		err := d.Decode(&p)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			log.WithError(err).Error("Could not Decode incoming request body")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
 
 		p, err = account.AddAccount(DBConnection, p)
 		if err != nil {
+			log.WithError(err).Error("AddAccount DB operation returned an error")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
 		resultDb, err := json.Marshal(p)
 		if err != nil {
-			log.WithError(err).Error(err.Error())
+			log.WithError(err).Error("Could not marshal DB data into the Account type")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
 		}
-		w.Write([]byte(resultDb))
+		w.Write(resultDb)
 	default:
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+		return
 	}
 }
 
@@ -91,96 +97,80 @@ func accountIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		// Get accountType from DB
-		var account datamodel.Account
-		bdStatement, err := DBConnection.Prepare("SELECT accountId, typeId, name, description, active FROM account WHERE accountId = ?")
+		// Get account from DB by the account ID
+		_, err := strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			log.Fatal(err)
-		}
-		defer bdStatement.Close()
-
-		var accountId int64
-		var typeId int64
-		var name string
-		var description sql.NullString
-		var active bool
-
-		err = bdStatement.QueryRow(vars["id"]).Scan(&accountId, &typeId, &name, &description, &active)
-
-		if err != nil {
-			log.Print(err)
-			w.WriteHeader(http.StatusNotFound)
-			resp := make(map[string]string)
-			resp["message"] = fmt.Sprintf("account with ID %v was not found", vars["id"])
-			jsonResp, err := json.Marshal(resp)
-			if err != nil {
-				log.Printf("Error happened in JSON marshal. Err: %s", err)
-			}
-			w.Write(jsonResp)
-
+			log.WithError(err).WithField("IDparamener", vars["id"]).Error("Could not parse the AccountID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 			return
 		}
-		account = datamodel.Account{
-			AccountID:   accountId,
-			TypeID:      typeId,
-			Name:        name,
-			Description: description.String,
-			Active:      active,
-		}
 
-		j, _ := json.Marshal(account)
+		getAccount, err := account.GetAccountByID(DBConnection, vars["id"])
+		if err == account.ErrNoItemResponse {
+			respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
+			return
+		}
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
+		j, err := json.Marshal(getAccount)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
 		w.Write(j)
 
 	case "PUT":
-		// Decode the JSON in the body and overwrite 'tom' with it
 		d := json.NewDecoder(r.Body)
-		account := &datamodel.Account{}
-		err := d.Decode(account)
+		accountUpd := &datamodel.Account{}
+		err := d.Decode(accountUpd)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.WithError(err).Error("Could not decode incoming json body to the Account type")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		}
-		bdStatement, err := DBConnection.Prepare("UPDATE account SET typeId=?, name=?, description=?, active=? WHERE accountId = ?")
+
+		accountUpd.AccountID, err = strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			log.WithError(err).Error("cannot prepare update statement")
+			log.WithError(err).WithField("IDparamener", vars["id"]).Error("Could not parse the AccountID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
-		defer bdStatement.Close()
-		result, err := bdStatement.Exec(account.TypeID, account.Name, account.Description, account.Active, vars["id"])
+
+		err = account.UpdateAccountByID(DBConnection, accountUpd)
 
 		if err != nil {
-			log.WithError(err).Error("ErrSQLExecutionError")
-			// return account, ErrSQLExecutionError
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 		}
-		log.WithField("account", account).Info("account to update")
-		log.WithField("result", account).Info("result")
-		rowsUpdated, err := result.RowsAffected()
+
+		// Returning updated Account info
+		j, _ := json.Marshal(accountUpd)
 		if err != nil {
-			log.WithError(err).Error(err.Error())
-			// return account, ErrSQLInsertError
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
-		log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+		w.Write(j)
 
 	case "DELETE":
-		// Decode the JSON in the body and overwrite 'tom' with it
-		bdStatement, err := DBConnection.Prepare("DELETE FROM account WHERE accountId = ?")
+		iDparamener, err := strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			log.WithError(err).Error("cannot prepare update statement")
+			log.WithError(err).WithField("IDparamener", iDparamener).Error("Could not parse the AccountID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
-		defer bdStatement.Close()
-		result, err := bdStatement.Exec(vars["id"])
+
+		err = account.DeleteAccountByID(DBConnection, vars["id"])
 		if err != nil {
-			log.WithError(err).Error("ErrSQLExecutionError")
-			w.WriteHeader(http.StatusInternalServerError)
+			log.WithError(err).WithField("accountID", vars["id"]).Error("Could not delete the Account")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
-		log.WithField("result", result).Info("result")
-		rowsUpdated, err := result.RowsAffected()
-		if err != nil {
-			log.WithError(err).Error(err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNoContent)
+		return
+
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "I can't do that.")
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 	}
 }
 
@@ -189,43 +179,16 @@ func accountTypeHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		// Get accountType from DB
-		var accountTypes []datamodel.AccountType
-		bdStatement, err := DBConnection.Prepare("SELECT typeId, name, description FROM AccountType")
+		accountTypes, err := accountType.GetAllAccountTypes(DBConnection)
 		if err != nil {
-			log.Fatal(err)
-		}
-		defer bdStatement.Close()
-		rows, err := bdStatement.Query()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer rows.Close()
-
-		for rows.Next() {
-			// ...
-			var typeId int
-			var name string
-			var description sql.NullString
-			err := rows.Scan(&typeId, &name, &description)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-			accountType := datamodel.AccountType{
-				TypeID:      int64(typeId),
-				Name:        name,
-				Description: description.String,
-			}
-			accountTypes = append(accountTypes, accountType)
-			// log.Println(id, name)
-
-		}
-		if err = rows.Err(); err != nil {
-			log.Fatal(err)
+			log.WithError(err).Error("An error has happened during GetAllAccountTypes DB query")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 
-		j, _ := json.Marshal(accountTypes)
-		w.Write(j)
+		accountTypesStr, _ := json.Marshal(accountTypes)
+		log.WithField("accountTypes", accountTypes).Info("accountTypes...")
+		w.Write(accountTypesStr)
 
 	case "POST":
 		// Decode the JSON in the body and overwrite 'tom' with it
@@ -233,23 +196,26 @@ func accountTypeHandler(w http.ResponseWriter, r *http.Request) {
 		p := datamodel.AccountType{}
 		err := d.Decode(&p)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			log.WithError(err).Error("Could not Decode incoming request body")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 
-		p, err = accountType.AddAccountType(DBConnection, p)
+		accountType, err := accountType.AddAccountType(DBConnection, p)
 		if err != nil {
+			log.WithError(err).Error("AddAccountType DB operation returned an error")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
+		accountTypeStr, err := json.Marshal(accountType)
+		if err != nil {
+			log.WithError(err).Error("Could not marshal DB data into the AccountType type")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
-		resultDb, err := json.Marshal(p)
-		if err != nil {
-			log.WithError(err).Error(err.Error())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		}
-		w.Write([]byte(resultDb))
+		w.Write(accountTypeStr)
 
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "I can't do that.")
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 	}
 }
 
@@ -261,93 +227,82 @@ func accountTypeIDHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		// Get accountType from DB
-		var accountType datamodel.AccountType
-		bdStatement, err := DBConnection.Prepare("SELECT typeId, name, description FROM accountType WHERE typeId = ?")
+		_, err := strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			log.Fatal(err)
-		}
-		defer bdStatement.Close()
-
-		var typeId int
-		var name string
-		var description sql.NullString
-
-		err = bdStatement.QueryRow(vars["id"]).Scan(&typeId, &name, &description)
-
-		if err != nil {
-			log.Print(err)
-			w.WriteHeader(http.StatusNotFound)
-			resp := make(map[string]string)
-			resp["message"] = fmt.Sprintf("AccountType with ID %v was not found", vars["id"])
-			jsonResp, err := json.Marshal(resp)
-			if err != nil {
-				log.Printf("Error happened in JSON marshal. Err: %s", err)
-			}
-			w.Write(jsonResp)
-
+			log.WithError(err).WithField("IDparamener", vars["id"]).Error("Could not parse the AccountID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 			return
 		}
-		accountType = datamodel.AccountType{
-			TypeID:      int64(typeId),
-			Name:        name,
-			Description: description.String,
-		}
 
-		j, _ := json.Marshal(accountType)
-		w.Write(j)
+		getAccountType, err := accountType.GetAccountTypeByID(DBConnection, vars["id"])
+		if err == accountType.ErrNoItemResponse {
+			respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
+			return
+		}
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
+		getAccountTypeStr, _ := json.Marshal(getAccountType)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
+		w.Write(getAccountTypeStr)
 
 	case "PUT":
-		// Decode the JSON in the body and overwrite 'tom' with it
 		d := json.NewDecoder(r.Body)
-		accountType := &datamodel.AccountType{}
-		err := d.Decode(accountType)
+		accountTypeUpd := &datamodel.AccountType{}
+		err := d.Decode(accountTypeUpd)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.WithError(err).Error("Could not decode incoming json body to the AccountType type")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
 
-		bdStatement, err := DBConnection.Prepare("UPDATE accountType SET name=?, description=? WHERE typeId = ?")
+		accountTypeUpd.TypeID, err = strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			log.WithError(err).Error("cannot prepare update statement")
+			log.WithError(err).WithField("IDparamener", vars["id"]).Error("Could not parse the AccountID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
 
-		defer bdStatement.Close()
-		result, err := bdStatement.Exec(accountType.Name, accountType.Description, vars["id"])
+		err = accountType.UpdateAccountTypeByID(DBConnection, accountTypeUpd)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
 
+		// Returning updated AccountType info
+		j, _ := json.Marshal(accountTypeUpd)
 		if err != nil {
-			log.WithError(err).Error("ErrSQLExecutionError")
-			// return account, ErrSQLExecutionError
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
-		log.WithField("account", accountType).Info("accountType to update")
-		log.WithField("result", result).Info("result")
-		rowsUpdated, err := result.RowsAffected()
-		if err != nil {
-			log.WithError(err).Error(err.Error())
-			// return account, ErrSQLInsertError
-		}
-		log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+		w.Write(j)
 
 	case "DELETE":
-		// Decode the JSON in the body and overwrite 'tom' with it
-		bdStatement, err := DBConnection.Prepare("DELETE FROM accountType WHERE typeId = ?")
+		_, err := strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			log.WithError(err).Error("cannot prepare update statement")
+			log.WithError(err).WithField("IDparamener", vars["id"]).Error("Could not parse the AccountID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
-		defer bdStatement.Close()
-		result, err := bdStatement.Exec(vars["id"])
+
+		err = accountType.DeleteAccountTypeByID(DBConnection, vars["id"])
+
 		if err != nil {
-			log.WithError(err).Error("ErrSQLExecutionError")
-			w.WriteHeader(http.StatusInternalServerError)
+			log.WithError(err).WithField("accountTypeID", vars["id"]).Error("Could not delete the AccountType")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
-		log.WithField("result", result).Info("result")
-		rowsUpdated, err := result.RowsAffected()
-		if err != nil {
-			log.WithError(err).Error(err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNoContent)
+		return
+
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "I can't do that.")
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 	}
 }
 
@@ -358,8 +313,9 @@ func categoryHandler(w http.ResponseWriter, r *http.Request) {
 		// Get accountType from DB
 		categories, err := category.GetAllCategories(DBConnection)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			http.Error(w, "{\"message\": \"Something bad happened!\"", http.StatusInternalServerError)
+			log.WithError(err).Error("Could not do GetAllCategories")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 		if len(categories) == 0 {
 			log.Info("No rows were returned!")
@@ -369,132 +325,120 @@ func categoryHandler(w http.ResponseWriter, r *http.Request) {
 
 		categoriesStr, _ := json.Marshal(categories)
 		w.Write(categoriesStr)
+		return
 
 	case "POST":
-		// Decode the JSON in the body and overwrite 'tom' with it
 		d := json.NewDecoder(r.Body)
 		p := datamodel.Category{}
 		err := d.Decode(&p)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			log.WithError(err).WithField("IncominBody", r.Body).Error("Could not do Decode the response body")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
 
 		p, err = category.AddCategory(DBConnection, p)
 		if err != nil {
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			log.WithError(err).WithField("IncominBody", r.Body).Error("An error has happened during the AddCategory DB operation")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 		resultDb, err := json.Marshal(p)
 		if err != nil {
-			log.WithError(err).Error(err.Error())
-			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			log.WithError(err).Error("Could not marshal AddCategory outcoming object for response")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 		w.Write([]byte(resultDb))
+		return
 
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "I can't do that.")
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+		return
 	}
 }
 
 func categoryIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
-	log.Printf("gategoryID: %v", vars["id"])
+	log.Printf("categoryID: %v", vars["id"])
 
 	switch r.Method {
 	case "GET":
-		// Get accountType from DB
-		var category datamodel.Category
-		bdStatement, err := DBConnection.Prepare("SELECT categoryId, parentId, name, description, expence FROM category WHERE categoryID = ?")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer bdStatement.Close()
-
-		var categoryId int
-		var parentId int
-		var name string
-		var description sql.NullString
-		var expence bool
-
-		err = bdStatement.QueryRow(vars["id"]).Scan(&categoryId, &parentId, &name, &description, &expence)
+		// Get category from DB
+		getCategory, err := category.GetCategoryByID(DBConnection, vars["id"])
 
 		if err != nil {
-			log.Print(err)
-			w.WriteHeader(http.StatusNotFound)
-			resp := make(map[string]string)
-			resp["message"] = fmt.Sprintf("Category with ID %v was not found", vars["id"])
-			jsonResp, err := json.Marshal(resp)
-			if err != nil {
-				log.Printf("Error happened in JSON marshal. Err: %s", err)
+			if err == category.ErrNoItemResponse {
+				respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
+				return
 			}
-			w.Write(jsonResp)
-
-			return
-		}
-		category = datamodel.Category{
-			CategoryID:  int64(categoryId),
-			ParentID:    int64(parentId),
-			Name:        name,
-			Description: description.String,
-			Expence:     expence,
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+				return
+			}
 		}
 
-		j, _ := json.Marshal(category)
-		w.Write(j)
+		jsonStr, _ := json.Marshal(getCategory)
+		w.Write(jsonStr)
+		return
 
 	case "PUT":
-		// Decode the JSON in the body and overwrite 'tom' with it
 		d := json.NewDecoder(r.Body)
-		category := &datamodel.Category{}
-		err := d.Decode(category)
+		categoryUpd := &datamodel.Category{}
+		err := d.Decode(categoryUpd)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.WithError(err).WithField("IncominBody", r.Body).Error("Could not do Decode the response body")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
+		}
+		categoryUpd.CategoryID, err = strconv.ParseInt(vars["id"], 10, 64)
+		if err != nil {
+			log.WithError(err).WithField("categoryUpd", categoryUpd).Error("Could not parse the Category ID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
+		}
+		err = category.UpdateCategory(DBConnection, categoryUpd)
+
+		if err != nil {
+			log.WithError(err).WithField("categoryUpd", categoryUpd).Error("Could not update the Category")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 
-		bdStatement, err := DBConnection.Prepare("UPDATE category SET parentID=?, name=?, description=?, expence=? WHERE categoryId = ?")
+		response, err := json.Marshal(&categoryUpd)
 		if err != nil {
-			log.WithError(err).Error("cannot prepare update statement")
+			log.WithError(err).Error("Error encoding response object")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
 
-		defer bdStatement.Close()
-		result, err := bdStatement.Exec(category.ParentID, category.Name, category.Description, category.Expence, vars["id"])
-
-		if err != nil {
-			log.WithError(err).Error("ErrSQLExecutionError")
-			// return account, ErrSQLExecutionError
-		}
-		log.WithField("category", category).Info("category to update")
-		log.WithField("result", result).Info("result")
-		rowsUpdated, err := result.RowsAffected()
-		if err != nil {
-			log.WithError(err).Error(err.Error())
-			// return account, ErrSQLInsertError
-		}
-		log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(response)
+		return
 
 	case "DELETE":
-		// Decode the JSON in the body and overwrite 'tom' with it
-		bdStatement, err := DBConnection.Prepare("DELETE FROM category WHERE categoryId = ?")
+		categoryID, err := strconv.ParseInt(vars["id"], 10, 64)
 		if err != nil {
-			log.WithError(err).Error("cannot prepare update statement")
+			log.WithError(err).WithField("categoryID", categoryID).Error("Could not parse the Category ID")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
 		}
-		defer bdStatement.Close()
-		result, err := bdStatement.Exec(vars["id"])
+
+		err = category.DeleteCategoryByID(DBConnection, categoryID)
 		if err != nil {
-			log.WithError(err).Error("ErrSQLExecutionError")
-			w.WriteHeader(http.StatusInternalServerError)
+			log.WithError(err).WithField("categoryID", categoryID).Error("Could the category")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
 		}
-		log.WithField("result", result).Info("result")
-		rowsUpdated, err := result.RowsAffected()
-		if err != nil {
-			log.WithError(err).Error(err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNoContent)
+		return
+
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "I can't do that.")
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+		return
 	}
 }
 
