@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 	"github.com/winchien/moneyKeeper/backend/cmd/datamodel"
+	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler"
 )
 
 var (
@@ -18,9 +20,9 @@ var (
 )
 
 func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
-	var accountTypes []datamodel.AccountType
+	var accountTypes = []datamodel.AccountType{}
 
-	bdStatement, err := DBConnection.Prepare("SELECT typeId, name, description, active FROM accountType;")
+	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM moneykeeper.account_type;")
 	if err != nil {
 		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
 		return nil, ErrCannotPrepareSQLStatement
@@ -31,12 +33,13 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 	rows, err := bdStatement.Query()
 
 	if err != nil {
-		log.WithError(err).Fatal(err.Error())
+		log.WithError(err).Error(ErrSQLExecution)
+		return nil, ErrSQLExecution
 	}
 	defer rows.Close()
 
 	for rows.Next() {
-		var typeId int64
+		var typeId string
 		var name string
 		var description sql.NullString
 
@@ -58,8 +61,8 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 }
 
 func AddAccountType(DBConnection *sql.DB, accountType datamodel.AccountType) (datamodel.AccountType, error) {
-	log.WithField("account", accountType).Info("The AccountType object")
-	bdStatement, err := DBConnection.Prepare("INSERT INTO accountType(name, description) VALUES (?, ?);")
+	log.WithField("accountType", accountType).Info("The AccountType object")
+	bdStatement, err := DBConnection.Prepare(`INSERT INTO moneykeeper.account_type(name, description) VALUES ($1, $2) RETURNING type_id;`)
 	if err != nil {
 		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
 		return accountType, ErrCannotPrepareSQLStatement
@@ -67,25 +70,24 @@ func AddAccountType(DBConnection *sql.DB, accountType datamodel.AccountType) (da
 
 	defer bdStatement.Close()
 
-	result, err := bdStatement.Exec(accountType.Name, accountType.Description)
+	err = bdStatement.QueryRow(accountType.Name, accountType.Description).Scan(&accountType.TypeID)
 
 	if err != nil {
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == sqlhandler.PGErrUniqueViolation {
+				return accountType, sqlhandler.SQLConflict
+			}
+		}
 		log.WithError(err).Error(ErrSQLExecution)
 		return accountType, ErrSQLExecution
 	}
-	newId, err := result.LastInsertId()
-	if err != nil {
-		log.WithError(err).Error(err.Error())
-		return accountType, ErrSQLInsert
-	}
-	accountType.TypeID = newId
 	return accountType, nil
 }
 
 func GetAccountTypeByID(DBConnection *sql.DB, accountTyepID string) (*datamodel.AccountType, error) {
 	var accountType *datamodel.AccountType
 
-	bdStatement, err := DBConnection.Prepare("SELECT typeId, name, description FROM accountType WHERE typeId = ?;")
+	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM moneykeeper.account_type WHERE type_id = $1;")
 	if err != nil {
 		log.WithError(err).Error("Cannot prepare SELECT statement")
 		return nil, ErrCannotPrepareSQLStatement
@@ -93,7 +95,7 @@ func GetAccountTypeByID(DBConnection *sql.DB, accountTyepID string) (*datamodel.
 
 	defer bdStatement.Close()
 
-	var typeId int64
+	var typeId string
 	var name string
 	var description sql.NullString
 
@@ -115,9 +117,10 @@ func GetAccountTypeByID(DBConnection *sql.DB, accountTyepID string) (*datamodel.
 
 	return accountType, nil
 }
+
 func UpdateAccountTypeByID(DBConnection *sql.DB, accountTypeUpd *datamodel.AccountType) error {
 
-	bdStatement, err := DBConnection.Prepare("UPDATE accountType SET name=?, description=? WHERE typeId = ?")
+	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.account_type SET name=$1, description=$2 WHERE type_id = $3")
 	if err != nil {
 		log.WithError(err).Error("cannot prepare update statement")
 		return ErrCannotPrepareSQLStatement
@@ -126,6 +129,11 @@ func UpdateAccountTypeByID(DBConnection *sql.DB, accountTypeUpd *datamodel.Accou
 	result, err := bdStatement.Exec(accountTypeUpd.Name, accountTypeUpd.Description, accountTypeUpd.TypeID)
 
 	if err != nil {
+		if err, ok := err.(*pq.Error); ok {
+			if err.Code.Name() == sqlhandler.PGErrUniqueViolation {
+				return sqlhandler.SQLConflict
+			}
+		}
 		log.WithError(err).Error(ErrSQLExecution)
 		return ErrSQLExecution
 	}
@@ -141,7 +149,7 @@ func UpdateAccountTypeByID(DBConnection *sql.DB, accountTypeUpd *datamodel.Accou
 
 func DeleteAccountTypeByID(DBConnection *sql.DB, accountTypeID string) error {
 
-	bdStatement, err := DBConnection.Prepare("DELETE FROM accountType WHERE typeId = ?")
+	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.account_type WHERE type_id = $1")
 	if err != nil {
 		log.WithError(err).Error("cannot prepare delete statement")
 		return ErrCannotPrepareSQLStatement

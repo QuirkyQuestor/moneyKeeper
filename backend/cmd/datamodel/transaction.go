@@ -4,12 +4,12 @@ import "time"
 
 // Transaction is to represent the transaction info
 type Transaction struct {
-	TransactionID int64     `json:"transactionId"`
-	AccountID     int64     `json:"accountId"`
-	Date          time.Time `json:"date"`
-	Amount        float64   `json:"amount"`
-	RefAccount    int64     `json:"refAccount"`
-	Memo          string    `json:"memo"`
-	CategoryID    int64     `json:"categoryId"`
-	TransferRefID int64     `json:"transferRefId"`
+	TransactionID         string    `json:"transactionId"`
+	AccountFrom           string    `json:"accountFrom"`
+	Date                  time.Time `json:"date"`
+	Amount                float64   `json:"amount"`
+	AccountTo             string    `json:"accountTo"`
+	Memo                  string    `json:"memo"`
+	CategoryID            string    `json:"categoryId"`
+	TransferTransactionID string    `json:"transferTransactionId,omitempty"`
 }
