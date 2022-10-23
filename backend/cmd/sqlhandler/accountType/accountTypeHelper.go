@@ -49,13 +49,12 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 			return nil, ErrConvertingDBResponse
 		}
 
-		account := datamodel.AccountType{
+		accountType := datamodel.AccountType{
 			TypeID:      typeId,
 			Name:        name,
 			Description: description.String,
 		}
-		accountTypes = append(accountTypes, account)
-		log.WithField("account", account).Info("Got this...")
+		accountTypes = append(accountTypes, accountType)
 	}
 	return accountTypes, nil
 }

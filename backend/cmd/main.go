@@ -398,7 +398,8 @@ func transactionHandler(w http.ResponseWriter, r *http.Request) {
 		if newTransaction.AccountFrom == "" ||
 			newTransaction.AccountTo == "" ||
 			newTransaction.CategoryID == "" ||
-			newTransaction.Amount == 0 {
+			newTransaction.Amount == 0 ||
+			newTransaction.Date == nil {
 			log.Error("Transaction object missing mandatory fields")
 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 			return
@@ -419,79 +420,73 @@ func transactionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// func transactionIDHandler(w http.ResponseWriter, r *http.Request) {
+func transactionIDHandler(w http.ResponseWriter, r *http.Request) {
 
-// 	vars := mux.Vars(r)
-// 	log.Printf("categoryID: %v", vars["id"])
+	vars := mux.Vars(r)
+	log.Printf("transactionID: %v", vars["id"])
 
-// 	switch r.Method {
-// 	case "GET":
-// 		// Get category from DB
-// 		getCategory, err := category.GetCategoryByID(DBConnection, vars["id"])
+	switch r.Method {
+	case "GET":
+		// Get transaction from DB
+		getTransaction, err := transaction.GetTransactionByID(DBConnection, vars["id"])
 
-// 		if err != nil {
-// 			if err == category.ErrNoItemResponse {
-// 				respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
-// 				return
-// 			}
-// 			if err != nil {
-// 				respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-// 				return
-// 			}
-// 		}
+		if err != nil {
+			if err == transaction.ErrNoItemResponse {
+				respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
+				return
+			}
+			if err != nil {
+				respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+				return
+			}
+		}
 
-// 		respondWithJSON(w, http.StatusOK, getCategory)
-// 		return
+		respondWithJSON(w, http.StatusOK, getTransaction)
+		return
 
-// 	case "PUT":
-// 		d := json.NewDecoder(r.Body)
-// 		categoryUpd := &datamodel.Category{}
-// 		err := d.Decode(categoryUpd)
-// 		if err != nil {
-// 			log.WithError(err).WithField("IncominBody", r.Body).Error("Could not do Decode the response body")
-// 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-// 			return
-// 		}
-// 		categoryUpd.CategoryID = vars["id"]
-// 		if err != nil {
-// 			log.WithError(err).WithField("categoryUpd", categoryUpd).Error("Could not parse the Category ID")
-// 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-// 			return
-// 		}
-// 		err = category.UpdateCategory(DBConnection, categoryUpd)
+	case "PUT":
+		d := json.NewDecoder(r.Body)
+		transactionUpd := &datamodel.Transaction{}
+		err := d.Decode(transactionUpd)
+		if err != nil {
+			log.WithError(err).WithField("IncominBody", r.Body).Error("Could not do Decode the response body")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
+		}
 
-// 		if err != nil {
-// 			log.WithError(err).WithField("categoryUpd", categoryUpd).Error("Could not update the Category")
-// 			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-// 			return
-// 		}
+		transactionUpd.TransactionID = vars["id"]
 
-// 		respondWithJSON(w, http.StatusOK, &categoryUpd)
-// 		return
+		err = transaction.UpdateTransaction(DBConnection, transactionUpd)
 
-// 	case "DELETE":
-// 		categoryID, err := strconv.ParseInt(vars["id"], 10, 64)
-// 		if err != nil {
-// 			log.WithError(err).WithField("categoryID", categoryID).Error("Could not parse the Category ID")
-// 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-// 			return
-// 		}
+		if err != nil {
+			log.WithError(err).WithField("transactionUpd", transactionUpd).Error("Could not update the Transaction")
+			if err == transaction.ErrNoItemResponse {
+				respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
+				return
+			}
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
 
-// 		err = category.DeleteCategoryByID(DBConnection, categoryID)
-// 		if err != nil {
-// 			log.WithError(err).WithField("categoryID", categoryID).Error("Could the category")
-// 			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-// 			return
-// 		}
+		respondWithJSON(w, http.StatusOK, &transactionUpd)
+		return
 
-// 		respondWithJSON(w, http.StatusNoContent, nil)
-// 		return
+	case "DELETE":
+		err := transaction.DeleteTransactionByID(DBConnection, vars["id"])
+		if err != nil {
+			log.WithError(err).WithField("transactionID", vars["id"]).Error("Could not delete the transaction")
+			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+			return
+		}
 
-// 	default:
-// 		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
-// 		return
-// 	}
-// }
+		respondWithJSON(w, http.StatusNoContent, nil)
+		return
+
+	default:
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+		return
+	}
+}
 
 func main() {
 	DBConnection = sqlhandler.DBConnect()
@@ -499,16 +494,16 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/api/", apiHandler)                                                                                                        // GET saying Hello
-	r.HandleFunc("/api/account", accountHandler)                                                                                             // Handle Accout requests: GET ALL accounts, GET single specified account, POST new account, PUT updates the account, DELETE specified account
-	r.HandleFunc("/api/account/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", accountIDHandler)          // Handle account type requests: GET single specified account type, PUT to update account type, DELETE specified account type
-	r.HandleFunc("/api/account_type", accountTypeHandler)                                                                                    // Handle account type requests: GET all account type, POST new account type
-	r.HandleFunc("/api/account_type/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", accountTypeIDHandler) // Handle account type requests: GET single specified account type, PUT to update account type, DELETE specified account type
-	r.HandleFunc("/api/category", categoryHandler)                                                                                           // GET ALL categories, GET single category info, POST new category, PUT update category, DELETE category
-	r.HandleFunc("/api/category/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", categoryIDHandler)        // GET ALL categories, GET single category info, POST new category, PUT update category, DELETE category
-	r.HandleFunc("/api/transaction", transactionHandler)                                                                                     // GET ALL transactions, GET single transaction info, POST new transaction, PUT update transaction, DELETE transaction, SEARCH transactions by some criteria
-	// r.HandleFunc("/api/transaction/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", transactionIDHandler)  // GET ALL transactions, GET single transaction info, POST new transaction, PUT update transaction, DELETE transaction, SEARCH transactions by some criteria
+	r.HandleFunc("/api/account", accountHandler)                                                                                             // Handle Accout requests: GET ALL accounts, POST new account
+	r.HandleFunc("/api/account/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", accountIDHandler)          // Handle Account requests: GET single specified account type, PUT to update account type, DELETE specified account type
+	r.HandleFunc("/api/account_type", accountTypeHandler)                                                                                    // Handle AccountType requests: GET all account type, POST new account type
+	r.HandleFunc("/api/account_type/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", accountTypeIDHandler) // Handle AccountType requests: GET single specified account type, PUT to update account type, DELETE specified account type
+	r.HandleFunc("/api/category", categoryHandler)                                                                                           // GET ALL categories, POST new category
+	r.HandleFunc("/api/category/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", categoryIDHandler)        // GET single category info, PUT update category, DELETE category
+	r.HandleFunc("/api/transaction", transactionHandler)                                                                                     // GET ALL transactions, POST new transaction, SEARCH transactions by some criteria
+	r.HandleFunc("/api/transaction/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", transactionIDHandler)  // GET single transaction info, PUT update transaction, DELETE transaction
 
-	log.Println("Go!")
+	log.Println("Starting MoneyKeeper backend!")
 	srv := &http.Server{
 		Handler: r,
 		Addr:    ":8000",

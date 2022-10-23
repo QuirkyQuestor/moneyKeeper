@@ -110,7 +110,7 @@ func UpdateCategory(DBConnection *sql.DB, category *datamodel.Category) error {
 	log.WithField("category", category).Info("The Category object")
 	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.category SET parent_id=$1, name=$2, description=$3, expence=$4 WHERE category_id = $5")
 	if err != nil {
-		log.WithError(err).Error("cannot prepare update statement")
+		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
 		return ErrCannotPrepareSQLStatement
 	}
 
@@ -140,7 +140,7 @@ func DeleteCategoryByID(DBConnection *sql.DB, categoryID string) error {
 
 	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.category WHERE category_id = $1")
 	if err != nil {
-		log.WithError(err).Error("Cannot prepare SQL statement")
+		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
 		return ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
@@ -156,11 +156,9 @@ func DeleteCategoryByID(DBConnection *sql.DB, categoryID string) error {
 		log.WithError(err).Error("Cannot get rowsAffected for Delete")
 		return ErrSQLUpdate
 	}
-	log.WithField("rowsAffected", rowsAffected).Info("rowsAffected")
 
 	if rowsAffected != 1 {
-		log.Error("The record does not seem to be updated.")
-		return ErrSQLUpdate
+		log.WithField("rowsAffected", rowsAffected).Info("The requested category did not exist in the DB Table.")
 	}
 
 	return nil

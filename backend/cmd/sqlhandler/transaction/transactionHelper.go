@@ -50,11 +50,11 @@ func GetAllTransactions(DBConnection *sql.DB) ([]datamodel.Transaction, error) {
 		var transactionId string
 		var accountFrom string
 		var accountTo string
-		var date time.Time
+		var date *time.Time
 		var amount float64
 		var memo sql.NullString
 		var categoryId string
-		var transferTransactionId string
+		var transferTransactionId *string
 
 		err := rows.Scan(&transactionId, &accountFrom, &date, &amount, &accountTo, &memo, &categoryId, &transferTransactionId)
 		if err != nil {
@@ -77,7 +77,7 @@ func GetAllTransactions(DBConnection *sql.DB) ([]datamodel.Transaction, error) {
 
 func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (datamodel.Transaction, error) {
 	log.WithField("transaction", transaction).Info("The Transaction object")
-	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.transaction(account_from, date, amount, account_to, memo, category_id, transfer_ref_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING transaction_id;")
+	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.transaction(account_from, date, amount, account_to, memo, category_id, transfer_transaction_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING transaction_id;")
 	if err != nil {
 		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
 		return transaction, ErrCannotPrepareSQLStatement
@@ -100,98 +100,84 @@ func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (da
 	return transaction, nil
 }
 
-// func GetCategoryByID(DBConnection *sql.DB, categoryID string) (*datamodel.Category, error) {
+func GetTransactionByID(DBConnection *sql.DB, transactionID string) (*datamodel.Transaction, error) {
 
-// 	var category datamodel.Category
-// 	bdStatement, err := DBConnection.Prepare("SELECT categoryId, parentId, name, description, expence FROM category WHERE categoryID = $1")
-// 	if err != nil {
-// 		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
-// 		return nil, ErrCannotPrepareSQLStatement
-// 	}
-// 	defer bdStatement.Close()
+	var transaction datamodel.Transaction
+	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction WHERE transaction_id = $1")
+	if err != nil {
+		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		return nil, ErrCannotPrepareSQLStatement
+	}
+	defer bdStatement.Close()
 
-// 	var categoryId int
-// 	var parentId int
-// 	var name string
-// 	var description sql.NullString
-// 	var expence bool
+	err = bdStatement.QueryRow(transactionID).Scan(&transaction.TransactionID, &transaction.AccountFrom, &transaction.Date,
+		&transaction.Amount, &transaction.AccountTo, &transaction.Memo, &transaction.CategoryID, &transaction.TransferTransactionID)
 
-// 	err = bdStatement.QueryRow(categoryID).Scan(&categoryId, &parentId, &name, &description, &expence)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Info(ErrNoItemResponse)
+			return nil, ErrNoItemResponse
+		}
+		log.WithError(err).Error(ErrConvertingDBResponse)
+		return nil, ErrConvertingDBResponse
+	}
 
-// 	if err != nil {
-// 		if err == sql.ErrNoRows {
-// 			log.Info(ErrNoItemResponse)
-// 			return nil, ErrNoItemResponse
-// 		}
-// 		log.WithError(err).Error(ErrConvertingDBResponse)
-// 		return nil, ErrConvertingDBResponse
-// 	}
+	return &transaction, nil
+}
 
-// 	category = datamodel.Category{
-// 		CategoryID:  int64(categoryId),
-// 		ParentID:    int64(parentId),
-// 		Name:        name,
-// 		Description: description.String,
-// 		Expence:     expence,
-// 	}
-// 	return &category, nil
-// }
+func UpdateTransaction(DBConnection *sql.DB, transaction *datamodel.Transaction) error {
+	log.WithField("transaction", transaction).Info("The Transaction object")
+	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.transaction SET account_from=$1, date=$2, amount=$3, account_to=$4, memo=$5, category_id=$6, transfer_transaction_id=$7 WHERE transaction_id = $8")
+	if err != nil {
+		log.WithError(err).Error("cannot prepare update statement")
+	}
 
-// func UpdateCategory(DBConnection *sql.DB, category *datamodel.Category) error {
-// 	log.WithField("category", category).Info("The Category object")
-// 	bdStatement, err := DBConnection.Prepare("UPDATE category SET parentID=?, name=?, description=?, expence=? WHERE categoryId = ?")
-// 	if err != nil {
-// 		log.WithError(err).Error("cannot prepare update statement")
-// 	}
+	defer bdStatement.Close()
+	result, err := bdStatement.Exec(transaction.AccountFrom, transaction.Date, transaction.Amount, transaction.AccountTo, transaction.Memo, transaction.CategoryID, transaction.TransferTransactionID, transaction.TransactionID)
 
-// 	defer bdStatement.Close()
-// 	result, err := bdStatement.Exec(category.ParentID, category.Name, category.Description, category.Expence, category.CategoryID)
+	if err != nil {
+		log.WithError(err).Error(ErrSQLExecution)
+		return ErrSQLExecution
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.WithError(err).Error("Cannot get rowsAffected for UpdateTransaction")
+		return ErrSQLUpdate
+	}
+	log.WithField("rowsAffected", rowsAffected).Info("rowsAffected")
 
-// 	if err != nil {
-// 		log.WithError(err).Error(ErrSQLExecution)
-// 		return ErrSQLExecution
-// 	}
-// 	rowsAffected, err := result.RowsAffected()
-// 	if err != nil {
-// 		log.WithError(err).Error("Cannot get rowsAffected for Delete")
-// 		return ErrSQLUpdate
-// 	}
-// 	log.WithField("rowsAffected", rowsAffected).Info("rowsAffected")
+	if rowsAffected == 0 {
+		log.Error("The record does not seem to be updated.")
+		return ErrNoItemResponse
+	}
 
-// 	if rowsAffected != 1 {
-// 		log.Error("The record does not seem to be updated.")
-// 		return ErrSQLUpdate
-// 	}
+	return nil
+}
 
-// 	return nil
-// }
+func DeleteTransactionByID(DBConnection *sql.DB, transactionID string) error {
 
-// func DeleteCategoryByID(DBConnection *sql.DB, categoryID int64) error {
+	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.transaction WHERE transaction_id = $1")
+	if err != nil {
+		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		return ErrCannotPrepareSQLStatement
+	}
+	defer bdStatement.Close()
 
-// 	bdStatement, err := DBConnection.Prepare("DELETE FROM category WHERE categoryId = ?")
-// 	if err != nil {
-// 		log.WithError(err).Error("Cannot prepare SQL statement")
-// return ErrCannotPrepareSQLStatement
-// 	}
-// 	defer bdStatement.Close()
+	result, err := bdStatement.Exec(transactionID)
+	if err != nil {
+		log.WithError(err).Error(ErrSQLExecution)
+		return ErrSQLExecution
+	}
 
-// 	result, err := bdStatement.Exec(categoryID)
-// 	if err != nil {
-// 		log.WithError(err).Error(ErrSQLExecution)
-// 		return ErrSQLExecution
-// 	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.WithError(err).Error("Cannot get rowsAffected for Delete transaction")
+		return ErrSQLUpdate
+	}
 
-// 	rowsAffected, err := result.RowsAffected()
-// 	if err != nil {
-// 		log.WithError(err).Error("Cannot get rowsAffected for Delete")
-// 		return ErrSQLUpdate
-// 	}
-// 	log.WithField("rowsAffected", rowsAffected).Info("rowsAffected")
+	if rowsAffected != 1 {
+		log.WithField("rowsAffected", rowsAffected).Info("The requested transaction did not exist in the DB Table")
+	}
 
-// 	if rowsAffected != 1 {
-// 		log.Error("The record does not seem to be updated.")
-// 		return ErrSQLUpdate
-// 	}
-
-// 	return nil
-// }
+	return nil
+}
