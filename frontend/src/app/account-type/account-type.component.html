@@ -1,0 +1,84 @@
+<h2>Account Types</h2>
+
+<div>
+  <label for="new-account-type-name">Account-type name: </label>
+  <input id="new-account-type-name" #accountTypeName />
+  <label for="new-account-type-description">Account-type description: </label>
+  <input id="new-account-type-description" #accountTypeDescription />
+</div>
+
+<button
+  mat-raised-button
+  color="primary"
+  type="button"
+  class="add-button"
+  (click)="
+    addAccountType(accountTypeName.value, accountTypeDescription.value);
+    accountTypeName.value = '';
+    accountTypeDescription.value = ''
+  "
+>
+  Add AccountType
+</button>
+
+<mat-divider></mat-divider>
+
+<table mat-table [dataSource]="accountTypes" class="mat-elevation-z8">
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Name</th>
+    <td mat-cell *matCellDef="let type">{{ type.name }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="description">
+    <th mat-header-cell *matHeaderCellDef>Description</th>
+    <td mat-cell *matCellDef="let type">{{ type.description }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="actions">
+    <th mat-header-cell *matHeaderCellDef>Actions</th>
+    <td mat-cell *matCellDef="let type">
+      <button
+        mat-raised-button
+        color="primary"
+        title="Edit AccountType"
+        routerLink="/account_type/{{ type.typeId }}"
+      >
+        Edit
+      </button>
+
+      <button
+        mat-raised-button
+        color="warn"
+        title="Delete AccountType"
+        (click)="deleteAccountType(type)"
+      >
+        Delete
+      </button>
+    </td>
+  </ng-container>
+  <!--
+  <tr *ngFor="let type of accountTypes">
+    <td>{{ type.name }}</td>
+    <td>{{ type.description }}</td>
+    <td>
+      <button
+        type="button"
+        class="edit"
+        title="Edit AccountType"
+        routerLink="/account_type/{{ type.typeId }}"
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        class="delete"
+        title="Delete AccountType"
+        (click)="deleteAccountType(type)"
+      >
+        Delete
+      </button>
+    </td>
+  </tr> -->
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+</table>
