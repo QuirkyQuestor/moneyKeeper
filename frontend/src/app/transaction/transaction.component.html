@@ -1,0 +1,118 @@
+<h2>Account Types</h2>
+
+<div>
+  <label for="new-transaction-accountFrom">Transaction accountFrom: </label>
+  <input id="new-transaction-accountFrom" #transactionAccountFrom />
+  <label for="new-transaction-date">Transaction date: </label>
+  <input id="new-transaction-date" #transactionDate />
+  <label for="new-transaction-amount">Transaction amount: </label>
+  <input id="new-transaction-amount" #transactionAmount />
+  <label for="new-transaction-accountTo">Transaction accountTo: </label>
+  <input id="new-transaction-accountTo" #transactionAccountTo />
+  <label for="new-transaction-memo">Transaction memo: </label>
+  <input id="new-transaction-memo" #transactionMemo />
+  <label for="new-transaction-category">Transaction category: </label>
+  <input id="new-transaction-category" #transactionCategory />
+  <label for="new-transaction-transferTransactionId"
+    >Transaction transferTransactionId:
+  </label>
+  <input
+    id="new-transaction-transferTransactionId"
+    #transactionTransferTransactionId
+  />
+</div>
+
+<button
+  mat-raised-button
+  color="primary"
+  type="button"
+  class="add-button"
+  (click)="
+    addTransaction(
+      transactionAccountFrom.value,
+      transactionDate.value,
+      transactionAmount.value,
+      transactionAccountTo.value,
+      transactionMemo.value,
+      transactionCategory.value,
+      transactionTransferTransactionId.value
+    );
+    transactionAccountFrom.value = '';
+    transactionDate.value = '';
+    transactionAmount.value = '';
+    transactionAccountTo.value = '';
+    transactionMemo.value = '';
+    transactionCategory.value = '';
+    transactionTransferTransactionId.value = ''
+  "
+>
+  Add AccountType
+</button>
+
+<mat-divider></mat-divider>
+
+<table mat-table [dataSource]="transactions" class="mat-elevation-z8">
+  <ng-container matColumnDef="date">
+    <th mat-header-cell *matHeaderCellDef>Date</th>
+    <td mat-cell *matCellDef="let transaction">
+      {{ transaction.date }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="accountFrom">
+    <th mat-header-cell *matHeaderCellDef>AccountFrom</th>
+    <td mat-cell *matCellDef="let transaction">
+      {{ getAccountNameById(transaction.accountFrom) }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="amount">
+    <th mat-header-cell *matHeaderCellDef>Amount</th>
+    <td mat-cell *matCellDef="let transaction">{{ transaction.amount }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="accountTo">
+    <th mat-header-cell *matHeaderCellDef>AccountTo</th>
+    <td mat-cell *matCellDef="let transaction">
+      {{ getAccountNameById(transaction.accountTo) }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="memo">
+    <th mat-header-cell *matHeaderCellDef>Memo</th>
+    <td mat-cell *matCellDef="let transaction">{{ transaction.memo }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="category">
+    <th mat-header-cell *matHeaderCellDef>Category</th>
+    <td mat-cell *matCellDef="let transaction">
+      {{ getCategorytFullName(transaction.categoryId) }}
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="actions">
+    <th mat-header-cell *matHeaderCellDef>Actions</th>
+    <td mat-cell *matCellDef="let transaction">
+      <button
+        mat-raised-button
+        color="primary"
+        title="Edit AccountType"
+        routerLink="/transaction/{{ transaction.transactionId }}"
+      >
+        Edit
+      </button>
+
+      <button
+        mat-raised-button
+        color="warn"
+        title="Delete Transaction"
+        (click)="deleteTransaction(transaction)"
+      >
+        Delete
+      </button>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+</table>
