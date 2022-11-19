@@ -44,6 +44,15 @@ export class AccountTypeService {
     );
   }
 
+  updateAccountType(accountType: AccountType): Observable<AccountType> {
+    const url = `${this.accountTypeUrl}/${accountType.typeId}`;
+
+    return this.http.put<AccountType>(url, accountType, this.httpOptions).pipe(
+      tap((_) => console.log(`Updated AccountType id=${accountType.typeId}`)),
+      catchError(this.handleError<AccountType>("updateAccountType"))
+    );
+  }
+
   /**
    * Handle Http operation that failed.
    * Let the app continue.
