@@ -1,0 +1,11 @@
+<h1 mat-dialog-title>Delete Account</h1>
+<div mat-dialog-content>
+  <mat-label>
+    The Account <b>{{data.name}}</b> is about to be deleted.<br />
+    Please confirm the deletion.
+  </mat-label>
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onNoClick()" cdkFocusInitial>CANCEL</button>
+  <button mat-button [mat-dialog-close]="data">DELETE</button>
+</div>

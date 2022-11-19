@@ -29,6 +29,7 @@ export class AccountTypeComponent implements OnInit {
       .getAccountTypes()
       .subscribe((types) => (this.accountTypes = types));
   }
+
   addAccountType(name: string, description: string): void {
     name = name.trim();
     if (!name) {

@@ -11,7 +11,12 @@ import {
   AccountTypeEditComponent,
   AccountTypeDeleteComponent,
 } from "./account-type/account-type.component";
-import { AccountComponent } from "./account/account.component";
+import {
+  AccountComponent,
+  AccountAddComponent,
+  AccountEditComponent,
+  AccountDeleteComponent,
+} from "./account/account.component";
 import { CategoryComponent } from "./category/category.component";
 import { TransactionComponent } from "./transaction/transaction.component";
 
@@ -23,18 +28,25 @@ import { MatDialogModule } from "@angular/material/dialog";
 import { MatFormFieldModule } from "@angular/material/form-field";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { MatInputModule } from "@angular/material/input";
+import { MatCheckboxModule } from "@angular/material/checkbox";
 
 @NgModule({
   declarations: [
     AppComponent,
     DashboardComponent,
+
     AccountTypeComponent,
-    AccountComponent,
-    CategoryComponent,
-    TransactionComponent,
     AccountTypeAddComponent,
     AccountTypeEditComponent,
     AccountTypeDeleteComponent,
+
+    AccountComponent,
+    AccountAddComponent,
+    AccountEditComponent,
+    AccountDeleteComponent,
+
+    CategoryComponent,
+    TransactionComponent,
   ],
   imports: [
     BrowserModule,
@@ -50,6 +62,7 @@ import { MatInputModule } from "@angular/material/input";
     ReactiveFormsModule,
     // MaterialExampleModule,
     MatInputModule,
+    MatCheckboxModule,
   ],
   providers: [],
   bootstrap: [AppComponent],

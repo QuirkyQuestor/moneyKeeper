@@ -1,6 +1,11 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, Inject } from "@angular/core";
 import { AccountService } from "../account.service";
 import { Account } from "../account";
+import {
+  MatDialog,
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+} from "@angular/material/dialog";
 
 @Component({
   selector: "app-account",
@@ -10,7 +15,10 @@ import { Account } from "../account";
 export class AccountComponent implements OnInit {
   accounts: Account[] = [];
 
-  constructor(private accountService: AccountService) {}
+  constructor(
+    private accountService: AccountService,
+    public dialog: MatDialog
+  ) {}
 
   displayedColumns: string[] = [
     "name",
@@ -30,21 +38,125 @@ export class AccountComponent implements OnInit {
       .subscribe((accounts) => (this.accounts = accounts));
   }
 
-  addAccount(name: string, description: string): void {
+  addAccount(
+    typeId: string,
+    name: string,
+    description: string,
+    active: boolean
+  ): void {
     name = name.trim();
     if (!name) {
       return;
     }
     this.accountService
-      .addAccount({ name, description } as Account)
+      .addAccount({ typeId, name, description, active } as Account)
       .subscribe((account: Account) => {
         this.accounts.push(account);
       });
+  }
+
+  updateAccount(account: Account): void {
+    console.log(account);
+
+    this.accountService.updateAccount(account).subscribe();
   }
 
   deleteAccount(account: Account): void {
     console.log(account);
     this.accounts = this.accounts.filter((h) => h !== account);
     this.accountService.deleteAccount(account.accountId).subscribe();
+  }
+
+  openAddAccountDialog(): void {
+    const dialogRef = this.dialog.open(AccountAddComponent, {
+      width: "250px",
+      data: { active: true },
+    });
+
+    dialogRef.afterClosed().subscribe((account) => {
+      console.log("The dialog was closed");
+      console.log(JSON.stringify(account));
+      if (account) {
+        this.addAccount(
+          account.typeId,
+          account.name,
+          account.description,
+          account.active
+        );
+      }
+    });
+  }
+
+  openEditAccountDialog(account: Account): void {
+    const dialogRef = this.dialog.open(AccountEditComponent, {
+      width: "250px",
+      data: account,
+    });
+
+    dialogRef.afterClosed().subscribe((account) => {
+      console.log("The dialog was closed");
+      if (account) {
+        this.updateAccount(account);
+      }
+    });
+  }
+
+  openDeleteAccountDialog(account: Account): void {
+    const dialogRef = this.dialog.open(AccountDeleteComponent, {
+      width: "250px",
+      data: account,
+    });
+
+    dialogRef.afterClosed().subscribe((account) => {
+      console.log("The dialog was closed");
+      if (account) {
+        this.deleteAccount(account);
+      }
+    });
+  }
+}
+
+@Component({
+  selector: "account-add-dialog",
+  templateUrl: "account.dialog.html",
+})
+export class AccountAddComponent {
+  constructor(
+    public dialogRef: MatDialogRef<AccountAddComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Account
+  ) {}
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
+@Component({
+  selector: "account-edit-dialog",
+  templateUrl: "account.dialog.html",
+})
+export class AccountEditComponent {
+  constructor(
+    public dialogRef: MatDialogRef<AccountEditComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Account
+  ) {}
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
+@Component({
+  selector: "account-delete-dialog",
+  templateUrl: "account.delete.html",
+})
+export class AccountDeleteComponent {
+  constructor(
+    public dialogRef: MatDialogRef<AccountDeleteComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Account
+  ) {}
+
+  onNoClick(): void {
+    this.dialogRef.close();
   }
 }
