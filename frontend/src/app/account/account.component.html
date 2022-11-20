@@ -12,33 +12,33 @@
 <mat-divider></mat-divider>
 
 <table mat-table [dataSource]="accounts" class="mat-elevation-z8">
-  <!--- Note that these columns can be defined in any order.
-        The actual rendered columns are set as a property on the row definition" -->
-
-  <!-- Position Column -->
+  <!-- Account Name Column -->
   <ng-container matColumnDef="name">
     <th mat-header-cell *matHeaderCellDef>Account Name</th>
     <td mat-cell *matCellDef="let account">{{ account.name }}</td>
   </ng-container>
 
-  <!-- Name Column -->
+  <!-- Account Type Column -->
   <ng-container matColumnDef="account_type">
     <th mat-header-cell *matHeaderCellDef>Account Type</th>
-    <td mat-cell *matCellDef="let account">{{ account.typeId }}</td>
+    <td mat-cell *matCellDef="let account">
+      {{ getAccountTypeNameById(account.typeId) }}
+    </td>
   </ng-container>
 
-  <!-- Weight Column -->
+  <!-- Description Column -->
   <ng-container matColumnDef="description">
     <th mat-header-cell *matHeaderCellDef>Description</th>
     <td mat-cell *matCellDef="let account">{{ account.description }}</td>
   </ng-container>
 
-  <!-- Symbol Column -->
+  <!-- Active Column -->
   <ng-container matColumnDef="active">
     <th mat-header-cell *matHeaderCellDef>Active</th>
     <td mat-cell *matCellDef="let account">{{ account.active }}</td>
   </ng-container>
 
+  <!-- Actions Column -->
   <ng-container matColumnDef="actions">
     <th mat-header-cell *matHeaderCellDef>Actions</th>
     <td mat-cell *matCellDef="let account">

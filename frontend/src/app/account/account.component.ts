@@ -1,11 +1,14 @@
 import { Component, OnInit, Inject } from "@angular/core";
 import { AccountService } from "../account.service";
 import { Account } from "../account";
+import { AccountTypeService } from "../account-type.service";
+
 import {
   MatDialog,
   MAT_DIALOG_DATA,
   MatDialogRef,
 } from "@angular/material/dialog";
+import { AccountType } from "../account-type";
 
 @Component({
   selector: "app-account",
@@ -14,9 +17,11 @@ import {
 })
 export class AccountComponent implements OnInit {
   accounts: Account[] = [];
+  accountTypes: AccountType[] = [];
 
   constructor(
     private accountService: AccountService,
+    public accountTypeService: AccountTypeService,
     public dialog: MatDialog
   ) {}
 
@@ -29,6 +34,7 @@ export class AccountComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.getAccountTypes();
     this.getAccounts();
   }
 
@@ -36,6 +42,12 @@ export class AccountComponent implements OnInit {
     this.accountService
       .getAccounts()
       .subscribe((accounts) => (this.accounts = accounts));
+  }
+
+  getAccountTypes(): void {
+    this.accountTypeService
+      .getAccountTypes()
+      .subscribe((types) => (this.accountTypes = types));
   }
 
   addAccount(
@@ -65,6 +77,10 @@ export class AccountComponent implements OnInit {
     console.log(account);
     this.accounts = this.accounts.filter((h) => h !== account);
     this.accountService.deleteAccount(account.accountId).subscribe();
+  }
+
+  getAccountTypeNameById(typeId: string) {
+    return this.accountTypes.find((type) => type.typeId == typeId)?.name;
   }
 
   openAddAccountDialog(): void {

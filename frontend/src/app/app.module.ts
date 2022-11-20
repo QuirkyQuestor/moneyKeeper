@@ -17,7 +17,12 @@ import {
   AccountEditComponent,
   AccountDeleteComponent,
 } from "./account/account.component";
-import { CategoryComponent } from "./category/category.component";
+import {
+  CategoryComponent,
+  CategoryAddComponent,
+  CategoryEditComponent,
+  CategoryDeleteComponent,
+} from "./category/category.component";
 import { TransactionComponent } from "./transaction/transaction.component";
 
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
@@ -46,6 +51,10 @@ import { MatCheckboxModule } from "@angular/material/checkbox";
     AccountDeleteComponent,
 
     CategoryComponent,
+    CategoryAddComponent,
+    CategoryEditComponent,
+    CategoryDeleteComponent,
+
     TransactionComponent,
   ],
   imports: [

@@ -1,24 +1,13 @@
 <h2>Account Types</h2>
 
-<div>
-  <label for="new-category-name">Category name: </label>
-  <input id="new-category-name" #categoryName />
-  <label for="new-category-description">Category description: </label>
-  <input id="new-category-description" #categoryDescription />
-</div>
-
 <button
   mat-raised-button
   color="primary"
   type="button"
   class="add-button"
-  (click)="
-    addCategory(categoryName.value, categoryDescription.value);
-    categoryName.value = '';
-    categoryDescription.value = ''
-  "
+  (click)="openAddCategoryDialog()"
 >
-  Add AccountType
+  Add Category
 </button>
 
 <mat-divider></mat-divider>
@@ -51,7 +40,7 @@
         mat-raised-button
         color="primary"
         title="Edit Category {{ category.name }}"
-        routerLink="/category/{{ category.categoryId }}"
+        (click)="openEditCategoryDialog(category)"
       >
         Edit
       </button>
@@ -60,7 +49,7 @@
         mat-raised-button
         color="warn"
         title="Delete Category {{ category.name }}"
-        (click)="deleteCategory(category)"
+        (click)="openDeleteCategoryDialog(category)"
       >
         Delete
       </button>

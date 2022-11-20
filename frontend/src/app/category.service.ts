@@ -26,12 +26,24 @@ export class CategoryService {
 
   /** POST Category from the server */
   addCategory(category: Category): Observable<Category> {
+    console.log(JSON.stringify(category));
+
     return this.http
       .post<Category>(this.CategoryUrl, category, this.httpOptions)
       .pipe(
         tap((_) => console.info("Added Category")),
         catchError(this.handleError<Category>("addCategory"))
       );
+  }
+
+  updateCategory(category: Category): Observable<Category> {
+    const url = `${this.CategoryUrl}/${category.categoryId}`;
+    console.log(JSON.stringify(category));
+
+    return this.http.put<Category>(url, category, this.httpOptions).pipe(
+      tap((_) => console.info("Updated Category")),
+      catchError(this.handleError<Category>("updateCategory"))
+    );
   }
 
   deleteCategory(category_id: string): Observable<Category> {

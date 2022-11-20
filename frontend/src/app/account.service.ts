@@ -26,11 +26,12 @@ export class AccountService {
 
   /** POST Account from the server */
   addAccount(account: Account): Observable<Account> {
+    console.log(account);
     return this.http
       .post<Account>(this.AccountUrl, account, this.httpOptions)
       .pipe(
         tap((_) => console.info("Added Account")),
-        catchError(this.handleError<Account>("addAccounts"))
+        catchError(this.handleError<Account>("addAccount"))
       );
   }
 
@@ -40,6 +41,15 @@ export class AccountService {
     return this.http.delete<Account>(url, this.httpOptions).pipe(
       tap((_) => console.log(`Deleted Account id=${account_id}`)),
       catchError(this.handleError<Account>("deleteAccount"))
+    );
+  }
+
+  updateAccount(account: Account): Observable<Account> {
+    const url = `${this.AccountUrl}/${account.accountId}`;
+
+    return this.http.put<Account>(url, account, this.httpOptions).pipe(
+      tap((_) => console.log(`Update Account id=${account.accountId}`)),
+      catchError(this.handleError<Account>("updateAccount"))
     );
   }
 
