@@ -1,0 +1,35 @@
+<h1 mat-dialog-title>Add Transaction</h1>
+<div mat-dialog-content>
+  <mat-form-field appearance="fill">
+    <mat-label>Account From:</mat-label>
+    <input matInput [(ngModel)]="data.accountFrom" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Date:</mat-label>
+    <input matInput [(ngModel)]="data.date" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Amount:</mat-label>
+    <input matInput [(ngModel)]="data.amount" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Account To:</mat-label>
+    <input matInput [(ngModel)]="data.accountTo" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Memo:</mat-label>
+    <input matInput [(ngModel)]="data.memo" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Category:</mat-label>
+    <input matInput [(ngModel)]="data.categoryId" />
+  </mat-form-field>
+  <mat-form-field appearance="fill">
+    <mat-label>Reference Transaction:</mat-label>
+    <input matInput [(ngModel)]="data.transferTransactionId" />
+  </mat-form-field>
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onNoClick()">No Thanks</button>
+  <button mat-button [mat-dialog-close]="data" cdkFocusInitial>OK</button>
+</div>

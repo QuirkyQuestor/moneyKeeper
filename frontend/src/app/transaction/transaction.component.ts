@@ -1,10 +1,15 @@
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, Inject } from "@angular/core";
 import { Account } from "../account";
 import { AccountService } from "../account.service";
 import { Category } from "../category";
 import { CategoryService } from "../category.service";
 import { Transaction } from "../transaction";
 import { TransactionService } from "../transaction.service";
+import {
+  MatDialog,
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+} from "@angular/material/dialog";
 
 @Component({
   selector: "app-transaction",
@@ -19,7 +24,8 @@ export class TransactionComponent implements OnInit {
   constructor(
     private transactionService: TransactionService,
     private categoryService: CategoryService,
-    private accountService: AccountService
+    private accountService: AccountService,
+    public dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -62,6 +68,10 @@ export class TransactionComponent implements OnInit {
       });
   }
 
+  updateTransaction(transaction: Transaction): void {
+    console.log(transaction);
+    this.transactionService.updateTransaction(transaction).subscribe();
+  }
   deleteTransaction(transaction: Transaction): void {
     console.log(transaction);
     this.transactions = this.transactions.filter((h) => h !== transaction);
@@ -129,4 +139,99 @@ export class TransactionComponent implements OnInit {
     "category",
     "actions",
   ];
+
+  openAddTransactionDialog(): void {
+    const dialogRef = this.dialog.open(TransactionAddComponent, {
+      width: "250px",
+      data: {},
+    });
+
+    dialogRef.afterClosed().subscribe((transaction) => {
+      console.log("The dialog was closed");
+      if (transaction) {
+        this.addTransaction(
+          transaction.accountFrom,
+          transaction.date,
+          transaction.amount,
+          transaction.accountTo,
+          transaction.memo,
+          transaction.categoryId,
+          transaction.transferTransactionId
+        );
+      }
+    });
+  }
+
+  openEditTransactionDialog(transaction: Transaction): void {
+    const dialogRef = this.dialog.open(TransactionEditComponent, {
+      width: "250px",
+      data: transaction,
+    });
+
+    dialogRef.afterClosed().subscribe((transaction) => {
+      console.log("The dialog was closed");
+      if (transaction) {
+        this.updateTransaction(transaction);
+      }
+    });
+  }
+
+  openDeleteTransactionDialog(transaction: Transaction): void {
+    const dialogRef = this.dialog.open(TransactionDeleteComponent, {
+      width: "250px",
+      data: transaction,
+    });
+
+    dialogRef.afterClosed().subscribe((transaction) => {
+      console.log("The dialog was closed");
+      if (transaction) {
+        this.deleteTransaction(transaction);
+      }
+    });
+  }
+}
+
+@Component({
+  selector: "transaction-add-dialog",
+  templateUrl: "transaction.dialog.html",
+})
+export class TransactionAddComponent {
+  constructor(
+    public dialogRef: MatDialogRef<TransactionAddComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Transaction
+  ) {}
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
+@Component({
+  selector: "transaction-edit-dialog",
+  templateUrl: "transaction.dialog.html",
+})
+export class TransactionEditComponent {
+  constructor(
+    public dialogRef: MatDialogRef<TransactionEditComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Transaction
+  ) {}
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
+}
+
+@Component({
+  selector: "transaction-delete-dialog",
+  templateUrl: "transaction.delete.html",
+})
+export class TransactionDeleteComponent {
+  constructor(
+    public dialogRef: MatDialogRef<TransactionDeleteComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: Transaction
+  ) {}
+
+  onNoClick(): void {
+    this.dialogRef.close();
+  }
 }

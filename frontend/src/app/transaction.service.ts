@@ -35,6 +35,16 @@ export class TransactionService {
       );
   }
 
+  updateTransaction(transaction: Transaction): Observable<Transaction> {
+    console.info("Update Transaction", transaction);
+    const url = `${this.TransactionUrl}/${transaction.transactionId}`;
+
+    return this.http.put<Transaction>(url, transaction, this.httpOptions).pipe(
+      tap((_) => console.info("Updated Transaction")),
+      catchError(this.handleError<Transaction>("updateTransaction"))
+    );
+  }
+
   deleteTransaction(transaction_id: string): Observable<Transaction> {
     const url = `${this.TransactionUrl}/${transaction_id}`;
 

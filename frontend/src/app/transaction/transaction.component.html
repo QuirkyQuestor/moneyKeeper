@@ -1,52 +1,14 @@
 <h2>Account Types</h2>
 
-<div>
-  <label for="new-transaction-accountFrom">Transaction accountFrom: </label>
-  <input id="new-transaction-accountFrom" #transactionAccountFrom />
-  <label for="new-transaction-date">Transaction date: </label>
-  <input id="new-transaction-date" #transactionDate />
-  <label for="new-transaction-amount">Transaction amount: </label>
-  <input id="new-transaction-amount" #transactionAmount />
-  <label for="new-transaction-accountTo">Transaction accountTo: </label>
-  <input id="new-transaction-accountTo" #transactionAccountTo />
-  <label for="new-transaction-memo">Transaction memo: </label>
-  <input id="new-transaction-memo" #transactionMemo />
-  <label for="new-transaction-category">Transaction category: </label>
-  <input id="new-transaction-category" #transactionCategory />
-  <label for="new-transaction-transferTransactionId"
-    >Transaction transferTransactionId:
-  </label>
-  <input
-    id="new-transaction-transferTransactionId"
-    #transactionTransferTransactionId
-  />
-</div>
-
 <button
   mat-raised-button
   color="primary"
   type="button"
   class="add-button"
-  (click)="
-    addTransaction(
-      transactionAccountFrom.value,
-      transactionDate.value,
-      transactionAmount.value,
-      transactionAccountTo.value,
-      transactionMemo.value,
-      transactionCategory.value,
-      transactionTransferTransactionId.value
-    );
-    transactionAccountFrom.value = '';
-    transactionDate.value = '';
-    transactionAmount.value = '';
-    transactionAccountTo.value = '';
-    transactionMemo.value = '';
-    transactionCategory.value = '';
-    transactionTransferTransactionId.value = ''
-  "
+  title="Add Transaction"
+  (click)="openAddTransactionDialog()"
 >
-  Add AccountType
+  Add Transaction
 </button>
 
 <mat-divider></mat-divider>
@@ -96,8 +58,8 @@
       <button
         mat-raised-button
         color="primary"
-        title="Edit AccountType"
-        routerLink="/transaction/{{ transaction.transactionId }}"
+        title="Edit Transaction"
+        (click)="openEditTransactionDialog(transaction)"
       >
         Edit
       </button>
@@ -106,7 +68,7 @@
         mat-raised-button
         color="warn"
         title="Delete Transaction"
-        (click)="deleteTransaction(transaction)"
+        (click)="openDeleteTransactionDialog(transaction)"
       >
         Delete
       </button>
