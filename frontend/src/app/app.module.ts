@@ -5,6 +5,7 @@ import { HttpClientModule } from "@angular/common/http";
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
 import { DashboardComponent } from "./dashboard/dashboard.component";
+
 import {
   AccountTypeComponent,
   AccountTypeAddComponent,
@@ -23,7 +24,12 @@ import {
   CategoryEditComponent,
   CategoryDeleteComponent,
 } from "./category/category.component";
-import { TransactionComponent } from "./transaction/transaction.component";
+import {
+  TransactionComponent,
+  TransactionAddComponent,
+  TransactionEditComponent,
+  TransactionDeleteComponent,
+} from "./transaction/transaction.component";
 
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { MatTableModule } from "@angular/material/table";
@@ -34,6 +40,7 @@ import { MatFormFieldModule } from "@angular/material/form-field";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
 import { MatInputModule } from "@angular/material/input";
 import { MatCheckboxModule } from "@angular/material/checkbox";
+import { MatSelectModule } from "@angular/material/select";
 
 @NgModule({
   declarations: [
@@ -56,6 +63,9 @@ import { MatCheckboxModule } from "@angular/material/checkbox";
     CategoryDeleteComponent,
 
     TransactionComponent,
+    TransactionAddComponent,
+    TransactionEditComponent,
+    TransactionDeleteComponent,
   ],
   imports: [
     BrowserModule,
@@ -72,6 +82,7 @@ import { MatCheckboxModule } from "@angular/material/checkbox";
     // MaterialExampleModule,
     MatInputModule,
     MatCheckboxModule,
+    MatSelectModule,
   ],
   providers: [],
   bootstrap: [AppComponent],

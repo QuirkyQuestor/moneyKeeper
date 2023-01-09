@@ -1,4 +1,13 @@
-<h2>Account Types</h2>
+<h2>Transactions</h2>
+
+<mat-form-field>
+  <mat-label>Select Account</mat-label>
+  <mat-select [(value)]="accountSelected.accountId">
+    <mat-option *ngFor="let account of accounts" [value]="account.accountId">
+      {{ account.name }}
+    </mat-option>
+  </mat-select>
+</mat-form-field>
 
 <button
   mat-raised-button

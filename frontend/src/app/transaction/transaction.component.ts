@@ -20,6 +20,13 @@ export class TransactionComponent implements OnInit {
   transactions: Transaction[] = [];
   categories: Category[] = [];
   accounts: Account[] = [];
+  accountSelected: Account = {
+    accountId: "",
+    typeId: "",
+    name: "",
+    description: "",
+    active: false,
+  };
 
   constructor(
     private transactionService: TransactionService,
@@ -87,9 +94,10 @@ export class TransactionComponent implements OnInit {
   }
 
   getAccounts(): void {
-    this.accountService
-      .getAccounts()
-      .subscribe((accounts) => (this.accounts = accounts));
+    this.accountService.getAccounts().subscribe((accounts) => {
+      this.accounts = accounts;
+      this.accountSelected = accounts[0];
+    });
   }
 
   getAccountNameById(accountId: string) {
@@ -142,7 +150,7 @@ export class TransactionComponent implements OnInit {
 
   openAddTransactionDialog(): void {
     const dialogRef = this.dialog.open(TransactionAddComponent, {
-      width: "250px",
+      width: "500px",
       data: {},
     });
 
@@ -164,7 +172,7 @@ export class TransactionComponent implements OnInit {
 
   openEditTransactionDialog(transaction: Transaction): void {
     const dialogRef = this.dialog.open(TransactionEditComponent, {
-      width: "250px",
+      width: "500px",
       data: transaction,
     });
 
@@ -178,7 +186,7 @@ export class TransactionComponent implements OnInit {
 
   openDeleteTransactionDialog(transaction: Transaction): void {
     const dialogRef = this.dialog.open(TransactionDeleteComponent, {
-      width: "250px",
+      width: "500px",
       data: transaction,
     });
 

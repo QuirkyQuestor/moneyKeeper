@@ -10,6 +10,11 @@ import {
 } from "@angular/material/dialog";
 import { AccountType } from "../account-type";
 
+export interface DialogData {
+  account: Account;
+  accountTypes: AccountType[];
+}
+
 @Component({
   selector: "app-account",
   templateUrl: "./account.component.html",
@@ -86,18 +91,27 @@ export class AccountComponent implements OnInit {
   openAddAccountDialog(): void {
     const dialogRef = this.dialog.open(AccountAddComponent, {
       width: "250px",
-      data: { active: true },
+      data: {
+        account: {
+          typeId: this.accountTypes[0].typeId,
+          active: true,
+          accountId: "",
+          name: "",
+          description: "",
+        } as Account,
+        accountTypes: this.accountTypes,
+      },
     });
 
-    dialogRef.afterClosed().subscribe((account) => {
+    dialogRef.afterClosed().subscribe((data) => {
       console.log("The dialog was closed");
-      console.log(JSON.stringify(account));
-      if (account) {
+      console.log(JSON.stringify(data));
+      if (data.account) {
         this.addAccount(
-          account.typeId,
-          account.name,
-          account.description,
-          account.active
+          data.account.typeId,
+          data.account.name,
+          data.account.description,
+          data.account.active
         );
       }
     });
@@ -106,13 +120,13 @@ export class AccountComponent implements OnInit {
   openEditAccountDialog(account: Account): void {
     const dialogRef = this.dialog.open(AccountEditComponent, {
       width: "250px",
-      data: account,
+      data: { account, accountTypes: this.accountTypes },
     });
 
-    dialogRef.afterClosed().subscribe((account) => {
+    dialogRef.afterClosed().subscribe((data) => {
       console.log("The dialog was closed");
-      if (account) {
-        this.updateAccount(account);
+      if (data.account) {
+        this.updateAccount(data.account);
       }
     });
   }
@@ -139,7 +153,7 @@ export class AccountComponent implements OnInit {
 export class AccountAddComponent {
   constructor(
     public dialogRef: MatDialogRef<AccountAddComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Account
+    @Inject(MAT_DIALOG_DATA) public data: DialogData
   ) {}
 
   onNoClick(): void {
@@ -154,7 +168,7 @@ export class AccountAddComponent {
 export class AccountEditComponent {
   constructor(
     public dialogRef: MatDialogRef<AccountEditComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Account
+    @Inject(MAT_DIALOG_DATA) public data: DialogData
   ) {}
 
   onNoClick(): void {

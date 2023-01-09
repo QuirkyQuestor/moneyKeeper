@@ -29,6 +29,7 @@ export class CategoryComponent implements OnInit {
       .getCategories()
       .subscribe((categories) => (this.categories = categories));
   }
+
   addCategory(
     name: string,
     parentId: string,
@@ -71,24 +72,22 @@ export class CategoryComponent implements OnInit {
     ) as Category;
   }
 
-  getCategorytFullName(categoryId: string) {
-    let fullName: string = "";
+  getCategorytParentName(category: Category) {
+    let parentName: string = "";
 
-    let category: Category;
+    while (category.parentId) {
+      let parent = this.getCategorytById(category.parentId);
 
-    do {
-      category = this.getCategorytById(categoryId);
-
-      if (!fullName) {
-        fullName = category.name;
+      if (!parentName) {
+        parentName = parent.name;
       } else {
-        fullName = [category.name, fullName].join(" :: ");
+        parentName = [parent.name, parentName].join(" :: ");
       }
 
-      categoryId = category.parentId;
-    } while (categoryId);
+      category = parent;
+    }
 
-    return fullName;
+    return parentName;
   }
 
   openAddCategoryDialog(): void {
