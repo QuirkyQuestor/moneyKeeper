@@ -6,6 +6,7 @@ import {
   MAT_DIALOG_DATA,
   MatDialogRef,
 } from "@angular/material/dialog";
+import * as _ from "lodash-es";
 
 @Component({
   selector: "app-account-type",
@@ -57,7 +58,7 @@ export class AccountTypeComponent implements OnInit {
 
   openAddAccountTypeDialog(): void {
     const dialogRef = this.dialog.open(AccountTypeAddComponent, {
-      width: "250px",
+      width: "350px",
       data: {},
     });
 
@@ -70,22 +71,24 @@ export class AccountTypeComponent implements OnInit {
   }
 
   openEditAccountTypeDialog(accountType: AccountType): void {
+    let at = _.cloneDeep(accountType);
+
     const dialogRef = this.dialog.open(AccountTypeEditComponent, {
-      width: "250px",
+      width: "350px",
       data: accountType,
     });
 
-    dialogRef.afterClosed().subscribe((accountType) => {
+    dialogRef.afterClosed().subscribe((at2) => {
       console.log("The dialog was closed");
-      if (accountType) {
-        this.updateAccountType(accountType);
+      if (at2 && !_.isEqual(at2, at)) {
+        this.updateAccountType(at2);
       }
     });
   }
 
   openDeleteAccountTypeDialog(accountType: AccountType): void {
     const dialogRef = this.dialog.open(AccountTypeDeleteComponent, {
-      width: "250px",
+      width: "350px",
       data: accountType,
     });
 
@@ -99,6 +102,7 @@ export class AccountTypeComponent implements OnInit {
 }
 
 @Component({
+  styleUrls: ["account-type.dialog.css"],
   selector: "account-type-add-dialog",
   templateUrl: "account-type.dialog.html",
 })
@@ -114,6 +118,7 @@ export class AccountTypeAddComponent {
 }
 
 @Component({
+  styleUrls: ["account-type.dialog.css"],
   selector: "account-type-edit-dialog",
   templateUrl: "account-type.dialog.html",
 })

@@ -2,6 +2,7 @@ import { Component, OnInit, Inject } from "@angular/core";
 import { AccountService } from "../account.service";
 import { Account } from "../account";
 import { AccountTypeService } from "../account-type.service";
+import * as _ from "lodash";
 
 import {
   MatDialog,
@@ -90,7 +91,7 @@ export class AccountComponent implements OnInit {
 
   openAddAccountDialog(): void {
     const dialogRef = this.dialog.open(AccountAddComponent, {
-      width: "250px",
+      width: "350px",
       data: {
         account: {
           typeId: this.accountTypes[0].typeId,
@@ -105,7 +106,6 @@ export class AccountComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((data) => {
       console.log("The dialog was closed");
-      console.log(JSON.stringify(data));
       if (data.account) {
         this.addAccount(
           data.account.typeId,
@@ -118,14 +118,16 @@ export class AccountComponent implements OnInit {
   }
 
   openEditAccountDialog(account: Account): void {
+    let ac = _.cloneDeep(account);
+
     const dialogRef = this.dialog.open(AccountEditComponent, {
-      width: "250px",
+      width: "350px",
       data: { account, accountTypes: this.accountTypes },
     });
 
-    dialogRef.afterClosed().subscribe((data) => {
+    dialogRef.afterClosed().subscribe((data: DialogData) => {
       console.log("The dialog was closed");
-      if (data.account) {
+      if (data && !_.isEqual(data?.account, ac)) {
         this.updateAccount(data.account);
       }
     });
@@ -133,11 +135,11 @@ export class AccountComponent implements OnInit {
 
   openDeleteAccountDialog(account: Account): void {
     const dialogRef = this.dialog.open(AccountDeleteComponent, {
-      width: "250px",
+      width: "350px",
       data: account,
     });
 
-    dialogRef.afterClosed().subscribe((account) => {
+    dialogRef.afterClosed().subscribe((account: Account) => {
       console.log("The dialog was closed");
       if (account) {
         this.deleteAccount(account);
@@ -147,6 +149,7 @@ export class AccountComponent implements OnInit {
 }
 
 @Component({
+  styleUrls: ["account.dialog.css"],
   selector: "account-add-dialog",
   templateUrl: "account.dialog.html",
 })
@@ -162,6 +165,7 @@ export class AccountAddComponent {
 }
 
 @Component({
+  styleUrls: ["account.dialog.css"],
   selector: "account-edit-dialog",
   templateUrl: "account.dialog.html",
 })

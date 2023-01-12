@@ -6,6 +6,7 @@ import {
   MAT_DIALOG_DATA,
   MatDialogRef,
 } from "@angular/material/dialog";
+import * as _ from "lodash-es";
 
 @Component({
   selector: "app-category",
@@ -110,6 +111,8 @@ export class CategoryComponent implements OnInit {
   }
 
   openEditCategoryDialog(category: Category): void {
+    let ct = _.cloneDeep(category);
+
     const dialogRef = this.dialog.open(CategoryEditComponent, {
       width: "250px",
       data: category,
@@ -117,7 +120,7 @@ export class CategoryComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((category) => {
       console.log("The dialog was closed");
-      if (category) {
+      if (category && !_.isEqual(category, ct)) {
         this.updateCategory(category);
       }
     });

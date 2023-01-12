@@ -10,6 +10,7 @@ import {
   MAT_DIALOG_DATA,
   MatDialogRef,
 } from "@angular/material/dialog";
+import * as _ from "lodash-es";
 
 @Component({
   selector: "app-transaction",
@@ -76,11 +77,12 @@ export class TransactionComponent implements OnInit {
   }
 
   updateTransaction(transaction: Transaction): void {
-    console.log(transaction);
+    // console.debug(transaction);
     this.transactionService.updateTransaction(transaction).subscribe();
   }
+
   deleteTransaction(transaction: Transaction): void {
-    console.log(transaction);
+    // console.debug(transaction);
     this.transactions = this.transactions.filter((h) => h !== transaction);
     this.transactionService
       .deleteTransaction(transaction.transactionId)
@@ -171,6 +173,8 @@ export class TransactionComponent implements OnInit {
   }
 
   openEditTransactionDialog(transaction: Transaction): void {
+    let tr = _.cloneDeep(transaction);
+
     const dialogRef = this.dialog.open(TransactionEditComponent, {
       width: "500px",
       data: transaction,
@@ -178,7 +182,7 @@ export class TransactionComponent implements OnInit {
 
     dialogRef.afterClosed().subscribe((transaction) => {
       console.log("The dialog was closed");
-      if (transaction) {
+      if (transaction && !_.isEqual(transaction, tr)) {
         this.updateTransaction(transaction);
       }
     });
@@ -200,6 +204,7 @@ export class TransactionComponent implements OnInit {
 }
 
 @Component({
+  styleUrls: ["transaction.dialog.css"],
   selector: "transaction-add-dialog",
   templateUrl: "transaction.dialog.html",
 })
@@ -215,6 +220,7 @@ export class TransactionAddComponent {
 }
 
 @Component({
+  styleUrls: ["transaction.dialog.css"],
   selector: "transaction-edit-dialog",
   templateUrl: "transaction.dialog.html",
 })

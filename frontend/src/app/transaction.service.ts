@@ -26,21 +26,21 @@ export class TransactionService {
 
   /** POST Transaction from the server */
   addTransaction(transaction: Transaction): Observable<Transaction> {
-    console.info("Added Transaction", transaction);
+    console.debug("Added Transaction", transaction);
     return this.http
       .post<Transaction>(this.TransactionUrl, transaction, this.httpOptions)
       .pipe(
-        tap((_) => console.info("Added Transaction")),
+        tap((_) => console.debug("Added Transaction")),
         catchError(this.handleError<Transaction>("addTransaction"))
       );
   }
 
   updateTransaction(transaction: Transaction): Observable<Transaction> {
-    console.info("Update Transaction", transaction);
+    // console.debug("Update Transaction", transaction);
     const url = `${this.TransactionUrl}/${transaction.transactionId}`;
 
     return this.http.put<Transaction>(url, transaction, this.httpOptions).pipe(
-      tap((_) => console.info("Updated Transaction")),
+      tap((_) => console.debug("Updated Transaction")),
       catchError(this.handleError<Transaction>("updateTransaction"))
     );
   }
