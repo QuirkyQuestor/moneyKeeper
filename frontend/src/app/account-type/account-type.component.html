@@ -1,51 +1,45 @@
 <h2>Account Types</h2>
 
 <button
-  mat-raised-button
-  color="primary"
   type="button"
-  class="add-button"
+  class="btn btn-primary"
   (click)="openAddAccountTypeDialog()"
 >
   Add AccountType
 </button>
 
-<mat-divider></mat-divider>
+<!-- <mat-divider></mat-divider> -->
 
-<table mat-table [dataSource]="accountTypes" class="mat-elevation-z8">
-  <ng-container matColumnDef="name">
-    <th mat-header-cell *matHeaderCellDef>Name</th>
-    <td mat-cell *matCellDef="let type">{{ type.name }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="description">
-    <th mat-header-cell *matHeaderCellDef>Description</th>
-    <td mat-cell *matCellDef="let type">{{ type.description }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="actions">
-    <th mat-header-cell *matHeaderCellDef>Actions</th>
-    <td mat-cell *matCellDef="let type">
-      <button
-        mat-raised-button
-        color="primary"
-        title="Edit AccountType"
-        (click)="openEditAccountTypeDialog(type)"
-      >
-        Edit
-      </button>
-
-      <button
-        mat-raised-button
-        color="warn"
-        title="Delete AccountType"
-        (click)="openDeleteAccountTypeDialog(type)"
-      >
-        Delete
-      </button>
-    </td>
-  </ng-container>
-
-  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Description</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let accountType of accountTypes">
+      <td>{{ accountType.name }}</td>
+      <td>{{ accountType.description }}</td>
+      <td>
+        <button
+          class="btn btn-primary"
+          title="Edit AccountType"
+          (click)="openEditAccountTypeDialog(accountType)"
+        >
+          Edit
+        </button>
+        <button
+          class="btn btn-danger"
+          title="Delete AccountType"
+          (click)="openDeletedAccountTypeDialog(accountType)"
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  </tbody>
 </table>
+
+<pre>{{ closeResult }}</pre>

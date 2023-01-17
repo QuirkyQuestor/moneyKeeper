@@ -1,11 +1,25 @@
-<h1 mat-dialog-title>Delete Category</h1>
-<div mat-dialog-content>
-  <mat-label>
-    The Category <b>{{data.name}}</b> is about to be deleted.<br />
-    Please confirm the deletion.
-  </mat-label>
+<div class="modal-header">
+  <h4 class="modal-title">Delete Category</h4>
 </div>
-<div mat-dialog-actions>
-  <button mat-button (click)="onNoClick()" cdkFocusInitial>CANCEL</button>
-  <button mat-button [mat-dialog-close]="data">DELETE</button>
+<div class="modal-body">
+  <label for="floatingInput">
+    The Cathegory <b>{{category.name}}</b> is about to be deleted.<br />
+    Please confirm the deletion.
+  </label>
+  <div class="modal-footer">
+    <button
+      type="button"
+      class="btn btn-primary"
+      (click)="activeModal.close(category)"
+    >
+      Delete
+    </button>
+    <button
+      type="button"
+      class="btn btn-info"
+      (click)="activeModal.dismiss('Cancel')"
+    >
+      Cancel
+    </button>
+  </div>
 </div>

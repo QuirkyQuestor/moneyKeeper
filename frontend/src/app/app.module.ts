@@ -32,15 +32,8 @@ import {
 } from "./transaction/transaction.component";
 
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
-import { MatTableModule } from "@angular/material/table";
-import { MatDividerModule } from "@angular/material/divider";
-import { MatButtonModule } from "@angular/material/button";
-import { MatDialogModule } from "@angular/material/dialog";
-import { MatFormFieldModule } from "@angular/material/form-field";
 import { FormsModule, ReactiveFormsModule } from "@angular/forms";
-import { MatInputModule } from "@angular/material/input";
-import { MatCheckboxModule } from "@angular/material/checkbox";
-import { MatSelectModule } from "@angular/material/select";
+import { NgbModule } from "@ng-bootstrap/ng-bootstrap";
 
 @NgModule({
   declarations: [
@@ -72,17 +65,9 @@ import { MatSelectModule } from "@angular/material/select";
     AppRoutingModule,
     HttpClientModule,
     BrowserAnimationsModule,
-    MatTableModule,
-    MatDividerModule,
-    MatButtonModule,
-    MatDialogModule,
-    MatFormFieldModule,
     FormsModule,
     ReactiveFormsModule,
-    // MaterialExampleModule,
-    MatInputModule,
-    MatCheckboxModule,
-    MatSelectModule,
+    NgbModule,
   ],
   providers: [],
   bootstrap: [AppComponent],

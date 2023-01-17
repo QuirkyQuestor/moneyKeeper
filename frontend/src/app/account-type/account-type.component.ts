@@ -1,12 +1,12 @@
-import { Component, OnInit, Inject } from "@angular/core";
+import { Component, OnInit, Input } from "@angular/core";
 import { AccountType } from "../account-type";
 import { AccountTypeService } from "../account-type.service";
-import {
-  MatDialog,
-  MAT_DIALOG_DATA,
-  MatDialogRef,
-} from "@angular/material/dialog";
 import * as _ from "lodash-es";
+import {
+  ModalDismissReasons,
+  NgbModal,
+  NgbActiveModal,
+} from "@ng-bootstrap/ng-bootstrap";
 
 @Component({
   selector: "app-account-type",
@@ -18,7 +18,7 @@ export class AccountTypeComponent implements OnInit {
 
   constructor(
     private accountTypeService: AccountTypeService,
-    public dialog: MatDialog
+    private modalService: NgbModal
   ) {}
 
   ngOnInit(): void {
@@ -54,50 +54,76 @@ export class AccountTypeComponent implements OnInit {
     this.accountTypeService.deleteAccountType(accountType.typeId).subscribe();
   }
 
-  displayedColumns: string[] = ["name", "description", "actions"];
+  closeResult = "";
 
-  openAddAccountTypeDialog(): void {
-    const dialogRef = this.dialog.open(AccountTypeAddComponent, {
-      width: "350px",
-      data: {},
-    });
-
-    dialogRef.afterClosed().subscribe((accountType) => {
-      console.log("The dialog was closed");
-      if (accountType) {
-        this.addAccountType(accountType.name, accountType.description);
-      }
-    });
+  private getDismissReason(reason: any): string {
+    if (reason === ModalDismissReasons.ESC) {
+      return "by pressing ESC";
+    } else if (reason === ModalDismissReasons.BACKDROP_CLICK) {
+      return "by clicking on a backdrop";
+    } else {
+      return `with: ${reason}`;
+    }
   }
 
-  openEditAccountTypeDialog(accountType: AccountType): void {
+  openEditAccountTypeDialog(accountType: AccountType) {
+    const modalRef = this.modalService.open(AccountTypeEditComponent);
     let at = _.cloneDeep(accountType);
+    modalRef.componentInstance.accountType = accountType;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result && !_.isEqual(result, at)) {
+          this.updateAccountType(result);
+        }
 
-    const dialogRef = this.dialog.open(AccountTypeEditComponent, {
-      width: "350px",
-      data: accountType,
-    });
-
-    dialogRef.afterClosed().subscribe((at2) => {
-      console.log("The dialog was closed");
-      if (at2 && !_.isEqual(at2, at)) {
-        this.updateAccountType(at2);
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 
-  openDeleteAccountTypeDialog(accountType: AccountType): void {
-    const dialogRef = this.dialog.open(AccountTypeDeleteComponent, {
-      width: "350px",
-      data: accountType,
-    });
+  openAddAccountTypeDialog() {
+    let accountType: AccountType = {
+      typeId: "",
+      name: "",
+      description: "",
+    };
+    const modalRef = this.modalService.open(AccountTypeAddComponent);
+    modalRef.componentInstance.accountType = accountType;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result) {
+          this.addAccountType(result.name, result.description);
+        }
 
-    dialogRef.afterClosed().subscribe((accountType) => {
-      console.log("The dialog was closed");
-      if (accountType) {
-        this.deleteAccountType(accountType);
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
+  }
+
+  openDeletedAccountTypeDialog(accountType: AccountType) {
+    const modalRef = this.modalService.open(AccountTypeDeleteComponent);
+    modalRef.componentInstance.accountType = accountType;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result) {
+          this.deleteAccountType(accountType);
+        }
+
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
+      }
+    );
   }
 }
 
@@ -107,14 +133,8 @@ export class AccountTypeComponent implements OnInit {
   templateUrl: "account-type.dialog.html",
 })
 export class AccountTypeAddComponent {
-  constructor(
-    public dialogRef: MatDialogRef<AccountTypeAddComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: AccountType
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  accountType!: AccountType;
+  constructor(public activeModal: NgbActiveModal) {}
 }
 
 @Component({
@@ -123,14 +143,9 @@ export class AccountTypeAddComponent {
   templateUrl: "account-type.dialog.html",
 })
 export class AccountTypeEditComponent {
-  constructor(
-    public dialogRef: MatDialogRef<AccountTypeEditComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: AccountType
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  // @Input()
+  accountType!: AccountType;
+  constructor(public activeModal: NgbActiveModal) {}
 }
 
 @Component({
@@ -138,12 +153,7 @@ export class AccountTypeEditComponent {
   templateUrl: "account-type.delete.html",
 })
 export class AccountTypeDeleteComponent {
-  constructor(
-    public dialogRef: MatDialogRef<AccountTypeDeleteComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: AccountType
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  // @Input()
+  accountType!: AccountType;
+  constructor(public activeModal: NgbActiveModal) {}
 }

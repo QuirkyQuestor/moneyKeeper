@@ -36,7 +36,7 @@ func GetAllCategories(DBConnection *sql.DB) ([]datamodel.Category, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var categoryId string
+		var categoryId *string
 		var parentId *string
 		var name string
 		var description sql.NullString
@@ -59,6 +59,7 @@ func GetAllCategories(DBConnection *sql.DB) ([]datamodel.Category, error) {
 
 func AddCategory(DBConnection *sql.DB, category *datamodel.Category) error {
 	log.WithField("category", category).Info("The Category object")
+
 	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.category(parent_id, name, description, expence) VALUES ($1, $2, $3, $4) RETURNING category_id;")
 	if err != nil {
 		log.WithError(err).Error(ErrCannotPrepareSQLStatement)

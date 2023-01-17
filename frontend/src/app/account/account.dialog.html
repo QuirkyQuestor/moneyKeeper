@@ -1,32 +1,74 @@
-<h1 mat-dialog-title>Add Account</h1>
-<div mat-dialog-content class="dialog-input-container">
-  <mat-form-field appearance="fill">
-    <mat-label>Name:</mat-label>
-    <input matInput [(ngModel)]="data.account.name" />
-  </mat-form-field>
-  <!-- <mat-form-field appearance="fill">
-    <mat-label>Account Type:</mat-label>
-    <input matInput [(ngModel)]="data.account.typeId" />
-  </mat-form-field> -->
-  <mat-form-field>
-    <mat-label>Account Type</mat-label>
-    <mat-select [(value)]="data.account.typeId">
-      <mat-option
-        *ngFor="let accountType of data.accountTypes"
+<div class="modal-header">
+  <h4 class="modal-title">Edit Account</h4>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Close"
+    (click)="activeModal.dismiss('Cross click')"
+  ></button>
+</div>
+<div class="modal-body">
+  <div class="mb-3">
+    <label for="nameField" class="form-floating mb-3">Account Name</label>
+    <input
+      type="text"
+      class="form-control"
+      id="nameField"
+      placeholder="Account type Name"
+      [(ngModel)]="account.name"
+    />
+  </div>
+  <div>
+    <label for="accountTypeSelect" class="form-floating mb-3"
+      >Account Type</label
+    >
+    <select
+      class="form-select"
+      id="accountTypeSelect"
+      aria-label="Default select example"
+      [(ngModel)]="account.typeId"
+    >
+      <option
+        *ngFor="let accountType of accountTypes"
         [value]="accountType.typeId"
       >
-        {{ accountType.name }} {{data.account.typeId}}
-      </mat-option>
-    </mat-select>
-  </mat-form-field>
+        {{ accountType.name }}
+      </option>
+    </select>
+  </div>
 
-  <mat-form-field appearance="fill">
-    <mat-label>Description:</mat-label>
-    <input matInput [(ngModel)]="data.account.description" />
-  </mat-form-field>
-  <mat-checkbox [(ngModel)]="data.account.active">Active</mat-checkbox>
+  <div class="mb-3">
+    <label for="descriptionField" class="form-floating mb-3">Description</label>
+    <input
+      type="text"
+      class="form-control"
+      id="descriptionField"
+      [(ngModel)]="account.description"
+    />
+  </div>
+  <div class="mb-3">
+    <label for="descriptionField" class="form-floating mb-3">Active</label>
+    <input
+      type="text"
+      class="form-control"
+      id="descriptionField"
+      [(ngModel)]="account.active"
+    />
+  </div>
 </div>
-<div mat-dialog-actions>
-  <button mat-button (click)="onNoClick()">No Thanks</button>
-  <button mat-button [mat-dialog-close]="data" cdkFocusInitial>OK</button>
+<div class="modal-footer">
+  <button
+    type="button"
+    class="btn btn-primary"
+    (click)="activeModal.close(account)"
+  >
+    Save
+  </button>
+  <button
+    type="button"
+    class="btn btn-info"
+    (click)="activeModal.dismiss('Cancel')"
+  >
+    Cancel
+  </button>
 </div>

@@ -1,63 +1,53 @@
 <h2>Categories</h2>
 
-<button
-  mat-raised-button
-  color="primary"
-  type="button"
-  class="add-button"
-  (click)="openAddCategoryDialog()"
->
-  Add Category
+<button type="button" class="btn btn-primary" (click)="openAddCategoryDialog()">
+  Add Cathegory
 </button>
 
-<mat-divider></mat-divider>
-
-<table mat-table [dataSource]="categories" class="mat-elevation-z8">
-  <ng-container matColumnDef="name">
-    <th mat-header-cell *matHeaderCellDef>Name</th>
-    <td mat-cell *matCellDef="let category">{{ category.name }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="parent">
-    <th mat-header-cell *matHeaderCellDef>Parent</th>
-    <td mat-cell *matCellDef="let category">
-      {{ getCategorytParentName(category) }}
-    </td>
-  </ng-container>
-
-  <ng-container matColumnDef="description">
-    <th mat-header-cell *matHeaderCellDef>Description</th>
-    <td mat-cell *matCellDef="let category">{{ category.description }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="expence">
-    <th mat-header-cell *matHeaderCellDef>Expence</th>
-    <td mat-cell *matCellDef="let category">{{ category.expence }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="actions">
-    <th mat-header-cell *matHeaderCellDef>Actions</th>
-    <td mat-cell *matCellDef="let category">
-      <button
-        mat-raised-button
-        color="primary"
-        title="Edit Category {{ category.name }}"
-        (click)="openEditCategoryDialog(category)"
-      >
-        Edit
-      </button>
-
-      <button
-        mat-raised-button
-        color="warn"
-        title="Delete Category {{ category.name }}"
-        (click)="openDeleteCategoryDialog(category)"
-      >
-        Delete
-      </button>
-    </td>
-  </ng-container>
-
-  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col">Name</th>
+      <th scope="col">Parent</th>
+      <th scope="col">Description</th>
+      <th scope="col">Expence</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let category of categories">
+      <td>{{ category.name }}</td>
+      <td>{{ getCategorytParentName(category) }}</td>
+      <td>{{ category.description }}</td>
+      <td>
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="checkbox"
+            [(ngModel)]="category.expence"
+            id="flexCheckChecked"
+            disabled="true"
+          />
+        </div>
+      </td>
+      <td>
+        <button
+          class="btn btn-primary"
+          title="Edit AccountType"
+          (click)="openEditCategoryDialog(category)"
+        >
+          Edit
+        </button>
+        <button
+          class="btn btn-danger"
+          title="Delete AccountType"
+          (click)="openDeleteCategoryDialog(category)"
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  </tbody>
 </table>
+
+<pre>{{ closeResult }}</pre>

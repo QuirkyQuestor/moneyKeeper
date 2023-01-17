@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -57,6 +58,7 @@ func accountHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "POST":
 		d := json.NewDecoder(r.Body)
+		log.WithField("d", d).Info("Incoming body string")
 		newAccount := datamodel.Account{}
 		err := d.Decode(&newAccount)
 		if err != nil {
@@ -274,11 +276,18 @@ func categoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 
 	case "POST":
-		d := json.NewDecoder(r.Body)
-		newCategory := datamodel.Category{}
-		err := d.Decode(&newCategory)
+		body := new(bytes.Buffer)
+		_, err := body.ReadFrom(r.Body)
 		if err != nil {
-			log.WithError(err).WithField("IncominBody", r.Body).Error("Could not do Decode the response body")
+			log.WithError(err).Error("Could not read the response body")
+			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+			return
+		}
+
+		newCategory := datamodel.Category{}
+		err = json.Unmarshal(body.Bytes(), &newCategory)
+		if err != nil {
+			log.WithError(err).WithField("IncominBody", body).Error("Could not parse the incomming request body")
 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 			return
 		}
@@ -290,7 +299,7 @@ func categoryHandler(w http.ResponseWriter, r *http.Request) {
 				respondWithError(w, http.StatusConflict, http.StatusText(http.StatusConflict))
 				return
 			}
-			log.WithError(err).WithField("IncominBody", r.Body).Error("An error has happened during the AddCategory DB operation")
+			log.WithError(err).WithField("IncominBody", body).Error("An error has happened during the AddCategory DB operation")
 			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 			return
 		}
@@ -336,7 +345,7 @@ func categoryIDHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 			return
 		}
-		categoryUpd.CategoryID = vars["id"]
+		*categoryUpd.CategoryID = vars["id"]
 		if err != nil {
 			log.WithError(err).WithField("categoryUpd", categoryUpd).Error("Could not parse the Category ID")
 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
@@ -394,6 +403,7 @@ func transactionHandler(w http.ResponseWriter, r *http.Request) {
 			respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 			return
 		}
+		log.WithField("IncominBody", r.Body).Info("Need the response body")
 
 		if newTransaction.AccountFrom == "" ||
 			newTransaction.AccountTo == "" ||

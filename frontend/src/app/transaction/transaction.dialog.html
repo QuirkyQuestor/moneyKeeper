@@ -1,35 +1,109 @@
-<h1 mat-dialog-title>Add Transaction</h1>
-<div mat-dialog-content class="dialog-input-container">
-  <mat-form-field appearance="fill">
-    <mat-label>Account From:</mat-label>
-    <input matInput [(ngModel)]="data.accountFrom" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Date:</mat-label>
-    <input matInput [(ngModel)]="data.date" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Amount:</mat-label>
-    <input matInput [(ngModel)]="data.amount" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Account To:</mat-label>
-    <input matInput [(ngModel)]="data.accountTo" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Memo:</mat-label>
-    <input matInput [(ngModel)]="data.memo" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Category:</mat-label>
-    <input matInput [(ngModel)]="data.categoryId" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Reference Transaction:</mat-label>
-    <input matInput [(ngModel)]="data.transferTransactionId" />
-  </mat-form-field>
+<div class="modal-header">
+  <h4 class="modal-title">Edit Transaction</h4>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Close"
+    (click)="activeModal.dismiss('Cross click')"
+  ></button>
 </div>
-<div mat-dialog-actions>
-  <button mat-button (click)="onNoClick()">No Thanks</button>
-  <button mat-button [mat-dialog-close]="data" cdkFocusInitial>OK</button>
+<div class="modal-body">
+  <div class="mb-3">
+    <label for="transactionDate" class="form-floating mb-3"
+      >Transaction Date</label
+    >
+    <input
+      type="text"
+      class="form-control"
+      id="transactionDate"
+      placeholder="Account type Name"
+      [(ngModel)]="transaction.date"
+    />
+  </div>
+  <div>
+    <label for="transactionAccountFrom" class="form-floating mb-3"
+      >Account From</label
+    >
+    <select
+      class="form-select"
+      id="transactionAccountFrom"
+      aria-label="Transaction Account From"
+      [(ngModel)]="transaction.accountFrom"
+    >
+      <option *ngFor="let account of accounts" [value]="account.accountId">
+        {{ account.name }}
+      </option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="transactionAmount" class="form-floating mb-3">Amount</label>
+    <input
+      type="text"
+      class="form-control"
+      id="transactionAmount"
+      [(ngModel)]="transaction.amount"
+    />
+  </div>
+  <div>
+    <label for="transactionAccountTo" class="form-floating mb-3"
+      >Account To</label
+    >
+    <select
+      class="form-select"
+      id="transactionAccountTo"
+      aria-label="Transaction Account From"
+      [(ngModel)]="transaction.accountTo"
+    >
+      <option *ngFor="let account of accounts" [value]="account.accountId">
+        {{ account.name }}
+      </option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="transactionMemo" class="form-floating mb-3">Memo</label>
+    <input
+      type="text"
+      class="form-control"
+      id="transactionMemo"
+      [(ngModel)]="transaction.memo"
+    />
+  </div>
+  <div class="mb-3">
+    <label for="transactionCategory" class="form-floating mb-3">Category</label>
+    <input
+      type="text"
+      class="form-control"
+      id="transactionCategory"
+      [(ngModel)]="transaction.categoryId"
+    />
+  </div>
+  <div class="mb-3">
+    <label for="referenceTransaction" class="form-floating mb-3"
+      >Reference Transaction</label
+    >
+    <input
+      type="text"
+      class="form-control"
+      id="referenceTransaction"
+      [(ngModel)]="transaction.transferTransactionId"
+    />
+  </div>
+</div>
+<div class="modal-footer">
+  <button
+    type="button"
+    class="btn btn-primary"
+    (click)="activeModal.close(transaction)"
+  >
+    Save
+  </button>
+  <button
+    type="button"
+    class="btn btn-info"
+    (click)="activeModal.dismiss('Cancel')"
+  >
+    Cancel
+  </button>
 </div>

@@ -1,12 +1,12 @@
 import { Component, OnInit, Inject } from "@angular/core";
 import { Category } from "../category";
 import { CategoryService } from "../category.service";
-import {
-  MatDialog,
-  MAT_DIALOG_DATA,
-  MatDialogRef,
-} from "@angular/material/dialog";
 import * as _ from "lodash-es";
+import {
+  ModalDismissReasons,
+  NgbModal,
+  NgbActiveModal,
+} from "@ng-bootstrap/ng-bootstrap";
 
 @Component({
   selector: "app-category",
@@ -18,7 +18,7 @@ export class CategoryComponent implements OnInit {
 
   constructor(
     private categoryService: CategoryService,
-    public dialog: MatDialog
+    private modalService: NgbModal
   ) {}
 
   ngOnInit(): void {
@@ -59,14 +59,6 @@ export class CategoryComponent implements OnInit {
     this.categoryService.updateCategory(category).subscribe();
   }
 
-  displayedColumns: string[] = [
-    "name",
-    "parent",
-    "description",
-    "expence",
-    "actions",
-  ];
-
   getCategorytById(categoryId: string): Category {
     return this.categories.find(
       (category) => category.categoryId == categoryId
@@ -91,53 +83,78 @@ export class CategoryComponent implements OnInit {
     return parentName;
   }
 
-  openAddCategoryDialog(): void {
-    const dialogRef = this.dialog.open(CategoryAddComponent, {
-      width: "250px",
-      data: {},
-    });
+  closeResult = "";
 
-    dialogRef.afterClosed().subscribe((category) => {
-      console.log("The dialog was closed");
-      if (category) {
-        this.addCategory(
-          category.name,
-          category.parentId,
-          category.description,
-          category.expence
-        );
-      }
-    });
+  private getDismissReason(reason: any): string {
+    if (reason === ModalDismissReasons.ESC) {
+      return "by pressing ESC";
+    } else if (reason === ModalDismissReasons.BACKDROP_CLICK) {
+      return "by clicking on a backdrop";
+    } else {
+      return `with: ${reason}`;
+    }
   }
 
-  openEditCategoryDialog(category: Category): void {
+  openAddCategoryDialog() {
+    const modalRef = this.modalService.open(CategoryAddComponent);
+    modalRef.componentInstance.categories = this.categories;
+
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        console.log(JSON.stringify(result));
+        if (result) {
+          this.addCategory(
+            result.name,
+            result.parentId,
+            result.description,
+            result.expence
+          );
+        }
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
+      }
+    );
+  }
+
+  openEditCategoryDialog(category: Category) {
     let ct = _.cloneDeep(category);
 
-    const dialogRef = this.dialog.open(CategoryEditComponent, {
-      width: "250px",
-      data: category,
-    });
+    const modalRef = this.modalService.open(CategoryEditComponent);
+    modalRef.componentInstance.category = category;
+    modalRef.componentInstance.categories = this.categories;
 
-    dialogRef.afterClosed().subscribe((category) => {
-      console.log("The dialog was closed");
-      if (category && !_.isEqual(category, ct)) {
-        this.updateCategory(category);
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result && !_.isEqual(result, ct)) {
+          this.updateCategory(result);
+        }
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 
-  openDeleteCategoryDialog(category: Category): void {
-    const dialogRef = this.dialog.open(CategoryDeleteComponent, {
-      width: "250px",
-      data: category,
-    });
-
-    dialogRef.afterClosed().subscribe((category) => {
-      console.log("The dialog was closed");
-      if (category) {
-        this.deleteCategory(category);
+  openDeleteCategoryDialog(category: Category) {
+    const modalRef = this.modalService.open(CategoryDeleteComponent);
+    modalRef.componentInstance.category = category;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result) {
+          this.deleteCategory(result);
+        }
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 }
 
@@ -146,13 +163,39 @@ export class CategoryComponent implements OnInit {
   templateUrl: "category.dialog.html",
 })
 export class CategoryAddComponent {
-  constructor(
-    public dialogRef: MatDialogRef<CategoryAddComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Category
-  ) {}
+  // @Input()
+  category: Category = {
+    categoryId: "",
+    parentId: "",
+    name: "",
+    description: "",
+    expence: true,
+  };
+  categories!: Category[];
+  constructor(public activeModal: NgbActiveModal) {}
 
-  onNoClick(): void {
-    this.dialogRef.close();
+  getCategorytParentName(category: Category) {
+    let parentName: string = "";
+
+    while (category.parentId) {
+      let parent = this.getCategorytById(category.parentId);
+
+      if (!parentName) {
+        parentName = parent.name;
+      } else {
+        parentName = [parent.name, parentName].join(" :: ");
+      }
+
+      category = parent;
+    }
+
+    return parentName;
+  }
+
+  getCategorytById(categoryId: string): Category {
+    return this.categories.find(
+      (category) => category.categoryId == categoryId
+    ) as Category;
   }
 }
 
@@ -161,13 +204,32 @@ export class CategoryAddComponent {
   templateUrl: "category.dialog.html",
 })
 export class CategoryEditComponent {
-  constructor(
-    public dialogRef: MatDialogRef<CategoryEditComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Category
-  ) {}
+  category!: Category;
+  categories!: Category[];
+  constructor(public activeModal: NgbActiveModal) {}
 
-  onNoClick(): void {
-    this.dialogRef.close();
+  getCategorytParentName(category: Category) {
+    let parentName: string = "";
+
+    while (category.parentId) {
+      let parent = this.getCategorytById(category.parentId);
+
+      if (!parentName) {
+        parentName = parent.name;
+      } else {
+        parentName = [parent.name, parentName].join(" :: ");
+      }
+
+      category = parent;
+    }
+
+    return parentName;
+  }
+
+  getCategorytById(categoryId: string): Category {
+    return this.categories.find(
+      (category) => category.categoryId == categoryId
+    ) as Category;
   }
 }
 
@@ -176,12 +238,6 @@ export class CategoryEditComponent {
   templateUrl: "category.delete.html",
 })
 export class CategoryDeleteComponent {
-  constructor(
-    public dialogRef: MatDialogRef<CategoryDeleteComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Category
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  category!: Category;
+  constructor(public activeModal: NgbActiveModal) {}
 }

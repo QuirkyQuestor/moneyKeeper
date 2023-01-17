@@ -5,12 +5,12 @@ import { Category } from "../category";
 import { CategoryService } from "../category.service";
 import { Transaction } from "../transaction";
 import { TransactionService } from "../transaction.service";
-import {
-  MatDialog,
-  MAT_DIALOG_DATA,
-  MatDialogRef,
-} from "@angular/material/dialog";
 import * as _ from "lodash-es";
+import {
+  ModalDismissReasons,
+  NgbModal,
+  NgbActiveModal,
+} from "@ng-bootstrap/ng-bootstrap";
 
 @Component({
   selector: "app-transaction",
@@ -21,7 +21,7 @@ export class TransactionComponent implements OnInit {
   transactions: Transaction[] = [];
   categories: Category[] = [];
   accounts: Account[] = [];
-  accountSelected: Account = {
+  selectedAccount: Account = {
     accountId: "",
     typeId: "",
     name: "",
@@ -33,7 +33,7 @@ export class TransactionComponent implements OnInit {
     private transactionService: TransactionService,
     private categoryService: CategoryService,
     private accountService: AccountService,
-    public dialog: MatDialog
+    private modalService: NgbModal
   ) {}
 
   ngOnInit(): void {
@@ -98,7 +98,7 @@ export class TransactionComponent implements OnInit {
   getAccounts(): void {
     this.accountService.getAccounts().subscribe((accounts) => {
       this.accounts = accounts;
-      this.accountSelected = accounts[0];
+      this.selectedAccount = accounts[0];
     });
   }
 
@@ -140,66 +140,93 @@ export class TransactionComponent implements OnInit {
     return fullName;
   }
 
-  displayedColumns: string[] = [
-    "date",
-    "accountFrom",
-    "amount",
-    "accountTo",
-    "memo",
-    "category",
-    "actions",
-  ];
+  closeResult = "";
 
-  openAddTransactionDialog(): void {
-    const dialogRef = this.dialog.open(TransactionAddComponent, {
-      width: "500px",
-      data: {},
-    });
-
-    dialogRef.afterClosed().subscribe((transaction) => {
-      console.log("The dialog was closed");
-      if (transaction) {
-        this.addTransaction(
-          transaction.accountFrom,
-          transaction.date,
-          transaction.amount,
-          transaction.accountTo,
-          transaction.memo,
-          transaction.categoryId,
-          transaction.transferTransactionId
-        );
-      }
-    });
+  private getDismissReason(reason: any): string {
+    if (reason === ModalDismissReasons.ESC) {
+      return "by pressing ESC";
+    } else if (reason === ModalDismissReasons.BACKDROP_CLICK) {
+      return "by clicking on a backdrop";
+    } else {
+      return `with: ${reason}`;
+    }
   }
 
-  openEditTransactionDialog(transaction: Transaction): void {
+  openAddTransactionDialog() {
+    let transaction: Transaction = {
+      transactionId: "",
+      accountFrom: "",
+      date: new Date(),
+      amount: 0,
+      accountTo: "",
+      memo: "",
+      categoryId: "",
+      transferTransactionId: "",
+    };
+    const modalRef = this.modalService.open(TransactionAddComponent);
+    modalRef.componentInstance.transaction = transaction;
+    modalRef.componentInstance.accounts = this.accounts;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result) {
+          if (result) {
+            this.addTransaction(
+              result.accountFrom,
+              result.date,
+              result.amount,
+              result.accountTo,
+              result.memo,
+              result.categoryId,
+              result.transferTransactionId
+            );
+          }
+        }
+
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
+      }
+    );
+  }
+
+  openEditTransactionDialog(transaction: Transaction) {
+    const modalRef = this.modalService.open(TransactionEditComponent);
     let tr = _.cloneDeep(transaction);
+    modalRef.componentInstance.transaction = transaction;
+    modalRef.componentInstance.accounts = this.accounts;
 
-    const dialogRef = this.dialog.open(TransactionEditComponent, {
-      width: "500px",
-      data: transaction,
-    });
-
-    dialogRef.afterClosed().subscribe((transaction) => {
-      console.log("The dialog was closed");
-      if (transaction && !_.isEqual(transaction, tr)) {
-        this.updateTransaction(transaction);
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result && !_.isEqual(result, tr)) {
+          this.updateTransaction(result);
+        }
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 
-  openDeleteTransactionDialog(transaction: Transaction): void {
-    const dialogRef = this.dialog.open(TransactionDeleteComponent, {
-      width: "500px",
-      data: transaction,
-    });
+  openDeleteTransactionDialog(transaction: Transaction) {
+    const modalRef = this.modalService.open(TransactionDeleteComponent);
+    modalRef.componentInstance.accountType = transaction;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result) {
+          this.deleteTransaction(result);
+        }
 
-    dialogRef.afterClosed().subscribe((transaction) => {
-      console.log("The dialog was closed");
-      if (transaction) {
-        this.deleteTransaction(transaction);
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 }
 
@@ -209,14 +236,10 @@ export class TransactionComponent implements OnInit {
   templateUrl: "transaction.dialog.html",
 })
 export class TransactionAddComponent {
-  constructor(
-    public dialogRef: MatDialogRef<TransactionAddComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Transaction
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  transaction!: Transaction;
+  accounts!: Account[];
+  categories!: Category[];
+  constructor(public activeModal: NgbActiveModal) {}
 }
 
 @Component({
@@ -225,14 +248,10 @@ export class TransactionAddComponent {
   templateUrl: "transaction.dialog.html",
 })
 export class TransactionEditComponent {
-  constructor(
-    public dialogRef: MatDialogRef<TransactionEditComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Transaction
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  transaction!: Transaction;
+  accounts!: Account[];
+  categories!: Category[];
+  constructor(public activeModal: NgbActiveModal) {}
 }
 
 @Component({
@@ -240,12 +259,6 @@ export class TransactionEditComponent {
   templateUrl: "transaction.delete.html",
 })
 export class TransactionDeleteComponent {
-  constructor(
-    public dialogRef: MatDialogRef<TransactionDeleteComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Transaction
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  transaction!: Transaction;
+  constructor(public activeModal: NgbActiveModal) {}
 }

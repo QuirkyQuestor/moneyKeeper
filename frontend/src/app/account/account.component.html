@@ -1,67 +1,43 @@
 <h2>Accounts</h2>
-<button
-  mat-raised-button
-  color="primary"
-  type="button"
-  class="add-button"
-  (click)="openAddAccountDialog()"
->
+
+<button type="button" class="btn btn-primary" (click)="openAddAccountDialog()">
   Add Account
 </button>
 
-<mat-divider></mat-divider>
-
-<table mat-table [dataSource]="accounts" class="mat-elevation-z8">
-  <!-- Account Name Column -->
-  <ng-container matColumnDef="name">
-    <th mat-header-cell *matHeaderCellDef>Account Name</th>
-    <td mat-cell *matCellDef="let account">{{ account.name }}</td>
-  </ng-container>
-
-  <!-- Account Type Column -->
-  <ng-container matColumnDef="account_type">
-    <th mat-header-cell *matHeaderCellDef>Account Type</th>
-    <td mat-cell *matCellDef="let account">
-      {{ getAccountTypeNameById(account.typeId) }}
-    </td>
-  </ng-container>
-
-  <!-- Description Column -->
-  <ng-container matColumnDef="description">
-    <th mat-header-cell *matHeaderCellDef>Description</th>
-    <td mat-cell *matCellDef="let account">{{ account.description }}</td>
-  </ng-container>
-
-  <!-- Active Column -->
-  <ng-container matColumnDef="active">
-    <th mat-header-cell *matHeaderCellDef>Active</th>
-    <td mat-cell *matCellDef="let account">{{ account.active }}</td>
-  </ng-container>
-
-  <!-- Actions Column -->
-  <ng-container matColumnDef="actions">
-    <th mat-header-cell *matHeaderCellDef>Actions</th>
-    <td mat-cell *matCellDef="let account">
-      <button
-        mat-raised-button
-        color="primary"
-        title="Edit Account"
-        (click)="openEditAccountDialog(account)"
-      >
-        Edit
-      </button>
-
-      <button
-        mat-raised-button
-        color="warn"
-        title="Delete Account"
-        (click)="openDeleteAccountDialog(account)"
-      >
-        Delete
-      </button>
-    </td>
-  </ng-container>
-
-  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th scope="col">Account Name</th>
+      <th scope="col">Account Type</th>
+      <th scope="col">Description</th>
+      <th scope="col">Active</th>
+      <th scope="col">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let account of accounts">
+      <td>{{ account.name }}</td>
+      <td>{{ getAccountTypeNameById(account.typeId) }}</td>
+      <td>{{ account.description }}</td>
+      <td>{{ account.active }}</td>
+      <td>
+        <button
+          class="btn btn-primary"
+          title="Edit Account"
+          (click)="openEditAccountDialog(account)"
+        >
+          Edit
+        </button>
+        <button
+          class="btn btn-danger"
+          title="Delete Account"
+          (click)="openDeleteAccountDialog(account)"
+        >
+          Delete
+        </button>
+      </td>
+    </tr>
+  </tbody>
 </table>
+
+<pre>{{ closeResult }}</pre>

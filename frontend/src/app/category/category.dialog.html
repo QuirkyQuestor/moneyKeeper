@@ -1,20 +1,91 @@
-<h1 mat-dialog-title>Add Category</h1>
-<div mat-dialog-content>
-  <mat-form-field appearance="fill">
-    <mat-label>Name:</mat-label>
-    <input matInput [(ngModel)]="data.name" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Parent:</mat-label>
-    <input matInput [(ngModel)]="data.parentId" />
-  </mat-form-field>
-  <mat-form-field appearance="fill">
-    <mat-label>Description:</mat-label>
-    <input matInput [(ngModel)]="data.description" />
-  </mat-form-field>
-  <mat-checkbox [(ngModel)]="data.expence">Expence</mat-checkbox>
+<div class="modal-header">
+  <h4 class="modal-title">Add Category</h4>
+  <button
+    type="button"
+    class="btn-close"
+    aria-label="Close"
+    (click)="activeModal.dismiss('Cross click')"
+  ></button>
 </div>
-<div mat-dialog-actions>
-  <button mat-button (click)="onNoClick()">No Thanks</button>
-  <button mat-button [mat-dialog-close]="data" cdkFocusInitial>OK</button>
+<div class="modal-body">
+  <div class="mb-3">
+    <label for="categoryName" class="form-floating mb-3">Category Name</label>
+    <input
+      type="text"
+      class="form-control"
+      id="categoryName"
+      placeholder="Category Name"
+      [(ngModel)]="category.name"
+    />
+  </div>
+
+  <div>
+    <label for="categoryParentSelect" class="form-floating mb-3">Parent</label>
+    <select
+      class="form-select"
+      id="categoryParentSelect"
+      aria-label="Category Parent"
+      [(ngModel)]="category.parentId"
+    >
+      <option *ngFor="let cat of categories" [value]="cat.parentId">
+        {{getCategorytParentName(cat)}}
+      </option>
+    </select>
+  </div>
+
+  <div class="mb-3">
+    <label for="categoryParent" class="form-floating mb-3">Parent</label>
+    <input
+      type="text"
+      class="form-control"
+      id="categoryParent"
+      placeholder="Category Parent"
+      [(ngModel)]="category.parentId"
+    />
+  </div>
+  <div class="mb-3">
+    <label for="categoryDescription" class="form-floating mb-3"
+      >Description</label
+    >
+    <input
+      type="text"
+      class="form-control"
+      id="categoryDescription"
+      [(ngModel)]="category.description"
+    />
+  </div>
+  <div class="mb-3">
+    <label for="categoryIsExpence" class="form-floating mb-3">IsExpence</label>
+    <input
+      type="text"
+      class="form-control"
+      id="categoryIsExpence"
+      [(ngModel)]="category.expence"
+    />
+  </div>
+  <div class="form-check">
+    <input
+      class="form-check-input"
+      type="checkbox"
+      [(ngModel)]="category.expence"
+      id="flexCheckChecked"
+    />
+    <label class="form-check-label" for="flexCheckChecked"> is Expence </label>
+  </div>
+</div>
+<div class="modal-footer">
+  <button
+    type="button"
+    class="btn btn-primary"
+    (click)="activeModal.close(category)"
+  >
+    Save
+  </button>
+  <button
+    type="button"
+    class="btn btn-info"
+    (click)="activeModal.dismiss('Cancel')"
+  >
+    Cancel
+  </button>
 </div>

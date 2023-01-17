@@ -20,7 +20,7 @@
             "tsConfig": "tsconfig.app.json",
             "assets": ["frontend/src/favicon.ico", "frontend/src/assets"],
             "styles": [
-              "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
+              "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "frontend/src/styles.css"
             ],
             "scripts": []
@@ -87,10 +87,7 @@
             "tsConfig": "tsconfig.spec.json",
             "karmaConfig": "frontend/karma.conf.js",
             "assets": ["frontend/src/favicon.ico", "frontend/src/assets"],
-            "styles": [
-              "./node_modules/@angular/material/prebuilt-themes/indigo-pink.css",
-              "frontend/src/styles.css"
-            ],
+            "styles": ["frontend/src/styles.css"],
             "scripts": []
           }
         }

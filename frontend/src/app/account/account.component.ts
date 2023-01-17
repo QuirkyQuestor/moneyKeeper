@@ -1,15 +1,16 @@
-import { Component, OnInit, Inject } from "@angular/core";
+import { Component, OnInit, Input } from "@angular/core";
 import { AccountService } from "../account.service";
 import { Account } from "../account";
 import { AccountTypeService } from "../account-type.service";
-import * as _ from "lodash";
+import * as _ from "lodash-es";
+
+import { AccountType } from "../account-type";
 
 import {
-  MatDialog,
-  MAT_DIALOG_DATA,
-  MatDialogRef,
-} from "@angular/material/dialog";
-import { AccountType } from "../account-type";
+  ModalDismissReasons,
+  NgbModal,
+  NgbActiveModal,
+} from "@ng-bootstrap/ng-bootstrap";
 
 export interface DialogData {
   account: Account;
@@ -28,16 +29,8 @@ export class AccountComponent implements OnInit {
   constructor(
     private accountService: AccountService,
     public accountTypeService: AccountTypeService,
-    public dialog: MatDialog
+    private modalService: NgbModal
   ) {}
-
-  displayedColumns: string[] = [
-    "name",
-    "account_type",
-    "description",
-    "active",
-    "actions",
-  ];
 
   ngOnInit(): void {
     this.getAccountTypes();
@@ -75,7 +68,6 @@ export class AccountComponent implements OnInit {
 
   updateAccount(account: Account): void {
     console.log(account);
-
     this.accountService.updateAccount(account).subscribe();
   }
 
@@ -89,62 +81,85 @@ export class AccountComponent implements OnInit {
     return this.accountTypes.find((type) => type.typeId == typeId)?.name;
   }
 
-  openAddAccountDialog(): void {
-    const dialogRef = this.dialog.open(AccountAddComponent, {
-      width: "350px",
-      data: {
-        account: {
-          typeId: this.accountTypes[0].typeId,
-          active: true,
-          accountId: "",
-          name: "",
-          description: "",
-        } as Account,
-        accountTypes: this.accountTypes,
+  closeResult = "";
+
+  private getDismissReason(reason: any): string {
+    if (reason === ModalDismissReasons.ESC) {
+      return "by pressing ESC";
+    } else if (reason === ModalDismissReasons.BACKDROP_CLICK) {
+      return "by clicking on a backdrop";
+    } else {
+      return `with: ${reason}`;
+    }
+  }
+
+  openAddAccountDialog() {
+    let account: Account = {
+      accountId: "",
+      typeId: this.accountTypes[0].typeId,
+      name: "",
+      description: "",
+      active: true,
+    };
+    const modalRef = this.modalService.open(AccountAddComponent);
+    modalRef.componentInstance.account = account;
+    modalRef.componentInstance.accountTypes = this.accountTypes;
+    modalRef.result.then(
+      (result: Account) => {
+        console.log("The dialog was closed");
+        if (result) {
+          console.log(result);
+
+          this.addAccount(
+            result.typeId,
+            result.name,
+            result.description,
+            result.active
+          );
+        }
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
       },
-    });
-
-    dialogRef.afterClosed().subscribe((data) => {
-      console.log("The dialog was closed");
-      if (data.account) {
-        this.addAccount(
-          data.account.typeId,
-          data.account.name,
-          data.account.description,
-          data.account.active
-        );
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 
-  openEditAccountDialog(account: Account): void {
+  openEditAccountDialog(account: Account) {
     let ac = _.cloneDeep(account);
+    const modalRef = this.modalService.open(AccountEditComponent);
+    modalRef.componentInstance.account = account;
+    modalRef.componentInstance.accountTypes = this.accountTypes;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result && !_.isEqual(result, ac)) {
+          this.updateAccount(account);
+        }
 
-    const dialogRef = this.dialog.open(AccountEditComponent, {
-      width: "350px",
-      data: { account, accountTypes: this.accountTypes },
-    });
-
-    dialogRef.afterClosed().subscribe((data: DialogData) => {
-      console.log("The dialog was closed");
-      if (data && !_.isEqual(data?.account, ac)) {
-        this.updateAccount(data.account);
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 
-  openDeleteAccountDialog(account: Account): void {
-    const dialogRef = this.dialog.open(AccountDeleteComponent, {
-      width: "350px",
-      data: account,
-    });
-
-    dialogRef.afterClosed().subscribe((account: Account) => {
-      console.log("The dialog was closed");
-      if (account) {
-        this.deleteAccount(account);
+  openDeleteAccountDialog(account: Account) {
+    const modalRef = this.modalService.open(AccountDeleteComponent);
+    modalRef.componentInstance.account = account;
+    modalRef.result.then(
+      (result) => {
+        console.log("The dialog was closed");
+        if (result) {
+          this.deleteAccount(account);
+        }
+        this.closeResult = `Closed with: ${JSON.stringify(result)}`;
+      },
+      (reason) => {
+        this.closeResult = `Dismissed ${this.getDismissReason(reason)}`;
       }
-    });
+    );
   }
 }
 
@@ -154,14 +169,10 @@ export class AccountComponent implements OnInit {
   templateUrl: "account.dialog.html",
 })
 export class AccountAddComponent {
-  constructor(
-    public dialogRef: MatDialogRef<AccountAddComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: DialogData
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  @Input()
+  account!: Account;
+  accountTypes!: AccountType[];
+  constructor(public activeModal: NgbActiveModal) {}
 }
 
 @Component({
@@ -170,14 +181,9 @@ export class AccountAddComponent {
   templateUrl: "account.dialog.html",
 })
 export class AccountEditComponent {
-  constructor(
-    public dialogRef: MatDialogRef<AccountEditComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: DialogData
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  account!: Account;
+  accountTypes!: AccountType[];
+  constructor(public activeModal: NgbActiveModal) {}
 }
 
 @Component({
@@ -185,12 +191,6 @@ export class AccountEditComponent {
   templateUrl: "account.delete.html",
 })
 export class AccountDeleteComponent {
-  constructor(
-    public dialogRef: MatDialogRef<AccountDeleteComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: Account
-  ) {}
-
-  onNoClick(): void {
-    this.dialogRef.close();
-  }
+  account!: Account;
+  constructor(public activeModal: NgbActiveModal) {}
 }
