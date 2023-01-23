@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -383,16 +384,39 @@ func transactionHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case "GET":
-		// Get transaction from DB
-		categories, err := transaction.GetAllTransactions(DBConnection)
-		if err != nil {
-			log.WithError(err).Error("Could not do GetAllTransactions")
-			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
-			return
-		}
 
-		respondWithJSON(w, http.StatusOK, categories)
-		return
+		queries := r.URL.Query()
+		if accountFrom, ok := queries["accountFrom"]; ok {
+			// Check here if `accountFrom` is in valid format
+			var re = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
+
+			if !re.Match([]byte(accountFrom[0])) {
+				log.WithField("accountFrom", accountFrom[0]).Error("accountFrom has incorrect format")
+				respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
+				return
+			}
+
+			transactions, err := transaction.GetTransactionsByAccountId(DBConnection, accountFrom[0])
+			if err != nil {
+				log.WithField("accountFrom", accountFrom[0]).WithError(err).Error("Could not do GetTransactionByID")
+				respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+				return
+			}
+			respondWithJSON(w, http.StatusOK, transactions)
+			return
+
+		} else {
+			// Get transaction from DB
+			transactions, err := transaction.GetAllTransactions(DBConnection)
+			if err != nil {
+				log.WithError(err).Error("Could not do GetAllTransactions")
+				respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+				return
+			}
+			respondWithJSON(w, http.StatusOK, transactions)
+			return
+
+		}
 
 	case "POST":
 		d := json.NewDecoder(r.Body)
@@ -430,6 +454,30 @@ func transactionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func transactionQueryHandler(w http.ResponseWriter, r *http.Request) {
+
+	switch r.Method {
+	case "GET":
+
+		accountFrom := r.FormValue("accountFrom")
+
+		log.WithField("accountFrom", accountFrom).Info("accountFrom")
+
+		// // Get transaction from DB
+		// transactions, err := transaction.GetAllTransactions(DBConnection)
+		// if err != nil {
+		// 	log.WithError(err).Error("Could not do GetAllTransactions")
+		// 	respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		// 	return
+		// }
+
+		respondWithJSON(w, http.StatusOK, nil)
+		return
+	default:
+		respondWithError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
+		return
+	}
+}
 func transactionIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
@@ -511,7 +559,8 @@ func main() {
 	r.HandleFunc("/api/category", categoryHandler)                                                                                           // GET ALL categories, POST new category
 	r.HandleFunc("/api/category/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", categoryIDHandler)        // GET single category info, PUT update category, DELETE category
 	r.HandleFunc("/api/transaction", transactionHandler)                                                                                     // GET ALL transactions, POST new transaction, SEARCH transactions by some criteria
-	r.HandleFunc("/api/transaction/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", transactionIDHandler)  // GET single transaction info, PUT update transaction, DELETE transaction
+	// r.HandleFunc("/api/transaction", transactionQueryHandler).Queries("accountFrom", "{accountFrom:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}") // GET transactions for the specified accountID
+	r.HandleFunc("/api/transaction/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", transactionIDHandler) // GET single transaction info, PUT update transaction, DELETE transaction
 
 	log.Println("Starting MoneyKeeper backend!")
 	srv := &http.Server{

@@ -75,6 +75,52 @@ func GetAllTransactions(DBConnection *sql.DB) ([]datamodel.Transaction, error) {
 	return transactions, nil
 }
 
+func GetTransactionsByAccountId(DBConnection *sql.DB, accountFrom string) ([]datamodel.Transaction, error) {
+	var transactions = []datamodel.Transaction{}
+
+	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction WHERE account_from = $1;")
+	if err != nil {
+		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		return transactions, ErrCannotPrepareSQLStatement
+	}
+
+	defer bdStatement.Close()
+	rows, err := bdStatement.Query(accountFrom)
+	if err != nil {
+		log.WithError(err).Error(ErrSQLExecution)
+		return nil, ErrSQLExecution
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var transactionId string
+		var accountFrom string
+		var accountTo string
+		var date *time.Time
+		var amount float64
+		var memo sql.NullString
+		var categoryId string
+		var transferTransactionId *string
+
+		err := rows.Scan(&transactionId, &accountFrom, &date, &amount, &accountTo, &memo, &categoryId, &transferTransactionId)
+		if err != nil {
+			log.WithError(err).Error("Could not parse row from the DB")
+		}
+		transaction := datamodel.Transaction{
+			TransactionID:         transactionId,
+			AccountFrom:           accountFrom,
+			AccountTo:             accountTo,
+			Date:                  date,
+			Amount:                amount,
+			CategoryID:            categoryId,
+			Memo:                  memo.String,
+			TransferTransactionID: transferTransactionId,
+		}
+		transactions = append(transactions, transaction)
+	}
+	return transactions, nil
+}
+
 func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (datamodel.Transaction, error) {
 	log.WithField("transaction", transaction).Info("The Transaction object")
 	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.transaction(account_from, date, amount, account_to, memo, category_id, transfer_transaction_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING transaction_id;")
