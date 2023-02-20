@@ -1,9 +1,9 @@
 module github.com/winchien/moneyKeeper
 
-go 1.17
+go 1.19
 
 require (
-	github.com/gorilla/mux v1.8.0
+	github.com/go-chi/chi/v5 v5.0.8
 	github.com/sirupsen/logrus v1.9.0
 	gopkg.in/yaml.v2 v2.4.0
 )
