@@ -5,7 +5,7 @@ moneyKeeper is a personal finance management application. It allows users to tra
 
 ## Current Status
 - **Backend**: Implemented in Go using the `chi` router.
-  - **Database**: PostgreSQL with UUIDv7 primary keys.
+  - **Database**: PostgreSQL 18.3 with UUIDv7 primary keys.
   - **Functionality**: RESTful API for managing Accounts, Account Types, Categories, and Transactions.
   - **Authentication**: JWT-based multi-user isolation with HttpOnly cookies.
   - **Logging**: Upgraded to standard library `log/slog` for structured JSON logging.
@@ -20,6 +20,7 @@ moneyKeeper is a personal finance management application. It allows users to tra
 ## Development Workflow
 - **Orchestration**: Use the root `Makefile` to manage the environment.
 - **Database**: PostgreSQL runs in Docker via `docker-compose.yml`.
+  - **Image**: `postgres:18.3-alpine`
   - Start DB: `make db-up`
   - Stop DB: `make db-down`
   - Initialize: The schema in `backend/internal/datamodel/schema.sql` is automatically applied on the first `db-up`.
@@ -36,10 +37,10 @@ moneyKeeper is a personal finance management application. It allows users to tra
 
 ## Technical Stack
 - **Backend**: Go (chi, slog, pq, bcrypt, jwt-v5, google/uuid)
-- **Database**: PostgreSQL (Multi-user schema with user isolation and UUIDv7)
+- **Database**: PostgreSQL 18.3 (Multi-user schema with user isolation and UUIDv7)
 - **Frontend**: React (TypeScript, Vite, CSS Modules, React Router, AuthContext)
 
 ## Agent Instructions
 - When working on the backend, adhere to the existing Go conventions and project structure.
 - When working on the frontend, use CSS Modules for styling, maintain Material Design elevation and radii standards, and utilize React Portals for modals.
-- Before testing, ensure a PostgreSQL instance is running (e.g., via Docker) and the `backend/dbconfig.yaml` is correctly configured.
+- Before testing, ensure the PostgreSQL 18.3 instance is running (via `make db-up`) and the `backend/dbconfig.yaml` is correctly configured.
