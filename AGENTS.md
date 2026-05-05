@@ -17,6 +17,16 @@ moneyKeeper is a personal finance management application. It allows users to tra
   - **Modal Readiness**: `modal-root` Portal container initialized.
   - **API Integration**: Connected to authenticated endpoints for Accounts and Transactions.
 
+## Development Workflow
+- **Orchestration**: Use the root `Makefile` to manage the environment.
+- **Database**: PostgreSQL runs in Docker via `docker-compose.yml`.
+  - Start DB: `make db-up`
+  - Stop DB: `make db-down`
+  - Initialize: The schema in `backend/internal/datamodel/schema.sql` is automatically applied on the first `db-up`.
+- **Backend**: `make run-backend` (runs Go API on port 8000).
+- **Frontend**: `make run-frontend` (runs React dev server on port 5173).
+- **Full Dev Stack**: `make dev` (starts DB and both apps).
+
 ## Project Goals
 1. **Frontend Rewrite**: [IN PROGRESS] Rebuild the user interface using React with a Material Design aesthetic.
 2. **Authentication**: [COMPLETED] Multi-user isolation using JWT and HttpOnly cookies.
