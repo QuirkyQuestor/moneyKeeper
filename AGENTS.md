@@ -19,11 +19,13 @@ moneyKeeper is a personal finance management application. It allows users to tra
 
 ## Development Workflow
 - **Orchestration**: Use the root `Makefile` to manage the environment.
-- **Database**: PostgreSQL runs in Docker via `docker-compose.yml`.
-  - **Image**: `postgres:18.3-alpine`
+- **Database**: PostgreSQL 18.3 runs in Docker via `docker-compose.yml`.
+  - Image: `postgres:18.3-alpine`
   - Start DB: `make db-up`
   - Stop DB: `make db-down`
   - Initialize: The schema in `backend/internal/datamodel/schema.sql` is automatically applied on the first `db-up`.
+- **Database UI**: pgAdmin 4 is available at `http://localhost:5050`.
+  - Login: `admin@moneykeeper.local` / `admin`
 - **Backend**: `make run-backend` (runs Go API on port 8000).
 - **Frontend**: `make run-frontend` (runs React dev server on port 5173).
 - **Full Dev Stack**: `make dev` (starts DB and both apps).
