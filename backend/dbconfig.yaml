@@ -1,0 +1,8 @@
+dbType: postgres
+dbProtocol: tcp
+dbSSLMode: disable
+dbHost: localhost
+dbPort: 5432
+dbName: ""
+userName: ""
+userPassword: ""

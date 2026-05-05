@@ -1,7 +1,0 @@
-dbType: mysql
-dbProtocol: tcp
-dbHost: localhost
-dbPort: 3306
-dbName: ""
-userName: ""
-userPassword: ""

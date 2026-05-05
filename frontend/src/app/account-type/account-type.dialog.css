@@ -1,8 +1,0 @@
-.dialog-input-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.dialog-input-container > * {
-  width: 100%;
-}

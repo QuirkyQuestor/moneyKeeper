@@ -12,13 +12,13 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/QuirkyQuestor/moneyKeeper/internal/datamodel"
+	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler"
+	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/account"
+	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/accountType"
+	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/category"
+	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/transaction"
 	log "github.com/sirupsen/logrus"
-	"github.com/winchien/moneyKeeper/backend/cmd/datamodel"
-	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler"
-	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler/account"
-	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler/accountType"
-	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler/category"
-	"github.com/winchien/moneyKeeper/backend/cmd/sqlhandler/transaction"
 )
 
 func init() {
@@ -475,9 +475,22 @@ func deleteTransactionByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	DBConnection = sqlhandler.DBConnect()
+	defer DBConnection.Close()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			if r.Method == "OPTIONS" {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	})
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	})
