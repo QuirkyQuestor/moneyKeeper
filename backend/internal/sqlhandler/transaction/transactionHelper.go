@@ -8,7 +8,7 @@ import (
 	"github.com/QuirkyQuestor/moneyKeeper/internal/datamodel"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler"
 	"github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 var (
@@ -34,14 +34,14 @@ func GetAllTransactions(DBConnection *sql.DB) ([]datamodel.Transaction, error) {
 
 	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return transactions, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
 	rows, err := bdStatement.Query()
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
 	}
 	defer rows.Close()
@@ -58,7 +58,7 @@ func GetAllTransactions(DBConnection *sql.DB) ([]datamodel.Transaction, error) {
 
 		err := rows.Scan(&transactionId, &accountFrom, &date, &amount, &accountTo, &memo, &categoryId, &transferTransactionId)
 		if err != nil {
-			log.WithError(err).Error("Could not parse row from the DB")
+			slog.Error("Could not parse row from the DB", "error", err)
 		}
 		transaction := datamodel.Transaction{
 			TransactionID:         transactionId,
@@ -80,14 +80,14 @@ func GetTransactionsByAccountId(DBConnection *sql.DB, accountFrom string) ([]dat
 
 	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction WHERE account_from = $1;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return transactions, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
 	rows, err := bdStatement.Query(accountFrom)
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
 	}
 	defer rows.Close()
@@ -104,7 +104,7 @@ func GetTransactionsByAccountId(DBConnection *sql.DB, accountFrom string) ([]dat
 
 		err := rows.Scan(&transactionId, &accountFrom, &date, &amount, &accountTo, &memo, &categoryId, &transferTransactionId)
 		if err != nil {
-			log.WithError(err).Error("Could not parse row from the DB")
+			slog.Error("Could not parse row from the DB", "error", err)
 		}
 		transaction := datamodel.Transaction{
 			TransactionID:         transactionId,
@@ -122,10 +122,10 @@ func GetTransactionsByAccountId(DBConnection *sql.DB, accountFrom string) ([]dat
 }
 
 func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (datamodel.Transaction, error) {
-	log.WithField("transaction", transaction).Info("The Transaction object")
+	slog.Info("The Transaction object", "transaction", transaction)
 	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.transaction(account_from, date, amount, account_to, memo, category_id, transfer_transaction_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING transaction_id;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return transaction, ErrCannotPrepareSQLStatement
 	}
 
@@ -139,7 +139,7 @@ func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (da
 				return transaction, sqlhandler.SQLConflict
 			}
 		}
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return transaction, ErrSQLExecution
 	}
 
@@ -151,7 +151,7 @@ func GetTransactionByID(DBConnection *sql.DB, transactionID string) (*datamodel.
 	var transaction datamodel.Transaction
 	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction WHERE transaction_id = $1")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return nil, ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
@@ -161,10 +161,10 @@ func GetTransactionByID(DBConnection *sql.DB, transactionID string) (*datamodel.
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Info(ErrNoItemResponse)
+			slog.Info(ErrNoItemResponse.Error())
 			return nil, ErrNoItemResponse
 		}
-		log.WithError(err).Error(ErrConvertingDBResponse)
+		slog.Error(ErrConvertingDBResponse.Error(), "error", err)
 		return nil, ErrConvertingDBResponse
 	}
 
@@ -172,28 +172,28 @@ func GetTransactionByID(DBConnection *sql.DB, transactionID string) (*datamodel.
 }
 
 func UpdateTransaction(DBConnection *sql.DB, transaction *datamodel.Transaction) error {
-	log.WithField("transaction", transaction).Info("The Transaction object")
+	slog.Info("The Transaction object", "transaction", transaction)
 	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.transaction SET account_from=$1, date=$2, amount=$3, account_to=$4, memo=$5, category_id=$6, transfer_transaction_id=$7 WHERE transaction_id = $8")
 	if err != nil {
-		log.WithError(err).Error("cannot prepare update statement")
+		slog.Error("cannot prepare update statement", "error", err)
 	}
 
 	defer bdStatement.Close()
 	result, err := bdStatement.Exec(transaction.AccountFrom, transaction.Date, transaction.Amount, transaction.AccountTo, transaction.Memo, transaction.CategoryID, transaction.TransferTransactionID, transaction.TransactionID)
 
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.WithError(err).Error("Cannot get rowsAffected for UpdateTransaction")
+		slog.Error("Cannot get rowsAffected for UpdateTransaction", "error", err)
 		return ErrSQLUpdate
 	}
-	log.WithField("rowsAffected", rowsAffected).Info("rowsAffected")
+	slog.Info("rowsAffected", "rowsAffected", rowsAffected)
 
 	if rowsAffected == 0 {
-		log.Error("The record does not seem to be updated.")
+		slog.Error("The record does not seem to be updated.")
 		return ErrNoItemResponse
 	}
 
@@ -204,26 +204,27 @@ func DeleteTransactionByID(DBConnection *sql.DB, transactionID string) error {
 
 	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.transaction WHERE transaction_id = $1")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 
 	result, err := bdStatement.Exec(transactionID)
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.WithError(err).Error("Cannot get rowsAffected for Delete transaction")
+		slog.Error("Cannot get rowsAffected for Delete transaction", "error", err)
 		return ErrSQLUpdate
 	}
 
 	if rowsAffected != 1 {
-		log.WithField("rowsAffected", rowsAffected).Info("The requested transaction did not exist in the DB Table")
+		slog.Info("The requested transaction did not exist in the DB Table", "rowsAffected", rowsAffected)
 	}
 
 	return nil
 }
+

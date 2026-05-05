@@ -8,7 +8,7 @@ import (
 
 	_ "github.com/lib/pq"
 	// _ "github.com/go-sql-driver/mysql"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 	"gopkg.in/yaml.v2"
 )
 
@@ -36,11 +36,12 @@ func (c *DBConfig) GetConfig() {
 
 	yamlFile, err := os.ReadFile("dbconfig.yaml")
 	if err != nil {
-		log.Printf("yamlFile.Get err   #%v ", err)
+		slog.Info(fmt.Sprintf("yamlFile.Get err   #%v ", err))
 	}
 	err = yaml.Unmarshal(yamlFile, c)
 	if err != nil {
-		log.Fatalf("Unmarshal: %v", err)
+		slog.Error(fmt.Sprintf("Unmarshal: %v", err))
+		os.Exit(1)
 	}
 }
 
@@ -61,10 +62,11 @@ func DBConnect() *sql.DB {
 	db, err := sql.Open(c.DbType, psqlconn)
 
 	if err != nil {
-		log.WithError(err).Error("Could not open connection to the DB")
+		slog.Error("Could not open connection to the DB", "error", err)
 		panic(err)
 	}
-	log.Info("Connection to the DB established")
+	slog.Info("Connection to the DB established")
 
 	return db
 }
+

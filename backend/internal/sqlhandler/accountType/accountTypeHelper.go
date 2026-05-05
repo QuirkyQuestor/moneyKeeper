@@ -7,7 +7,7 @@ import (
 	"github.com/QuirkyQuestor/moneyKeeper/internal/datamodel"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler"
 	"github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 var (
@@ -24,7 +24,7 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 
 	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM moneykeeper.account_type;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return nil, ErrCannotPrepareSQLStatement
 	}
 
@@ -33,7 +33,7 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 	rows, err := bdStatement.Query()
 
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
 	}
 	defer rows.Close()
@@ -45,7 +45,7 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 
 		err = rows.Scan(&typeId, &name, &description)
 		if err != nil {
-			log.WithError(err).Error(ErrConvertingDBResponse)
+			slog.Error(ErrConvertingDBResponse.Error(), "error", err)
 			return nil, ErrConvertingDBResponse
 		}
 
@@ -60,10 +60,10 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 }
 
 func AddAccountType(DBConnection *sql.DB, accountType datamodel.AccountType) (datamodel.AccountType, error) {
-	log.WithField("accountType", accountType).Info("The AccountType object")
+	slog.Info("The AccountType object", "accountType", accountType)
 	bdStatement, err := DBConnection.Prepare(`INSERT INTO moneykeeper.account_type(name, description) VALUES ($1, $2) RETURNING type_id;`)
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return accountType, ErrCannotPrepareSQLStatement
 	}
 
@@ -77,7 +77,7 @@ func AddAccountType(DBConnection *sql.DB, accountType datamodel.AccountType) (da
 				return accountType, sqlhandler.SQLConflict
 			}
 		}
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return accountType, ErrSQLExecution
 	}
 	return accountType, nil
@@ -88,7 +88,7 @@ func GetAccountTypeByID(DBConnection *sql.DB, accountTyepID string) (*datamodel.
 
 	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM moneykeeper.account_type WHERE type_id = $1;")
 	if err != nil {
-		log.WithError(err).Error("Cannot prepare SELECT statement")
+		slog.Error("Cannot prepare SELECT statement", "error", err)
 		return nil, ErrCannotPrepareSQLStatement
 	}
 
@@ -102,10 +102,10 @@ func GetAccountTypeByID(DBConnection *sql.DB, accountTyepID string) (*datamodel.
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Info(ErrNoItemResponse)
+			slog.Info(ErrNoItemResponse.Error())
 			return nil, ErrNoItemResponse
 		}
-		log.WithError(err).Error(ErrConvertingDBResponse)
+		slog.Error(ErrConvertingDBResponse.Error(), "error", err)
 		return nil, ErrConvertingDBResponse
 	}
 	accountType = &datamodel.AccountType{
@@ -121,7 +121,7 @@ func UpdateAccountTypeByID(DBConnection *sql.DB, accountTypeUpd *datamodel.Accou
 
 	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.account_type SET name=$1, description=$2 WHERE type_id = $3")
 	if err != nil {
-		log.WithError(err).Error("cannot prepare update statement")
+		slog.Error("cannot prepare update statement", "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
@@ -133,15 +133,15 @@ func UpdateAccountTypeByID(DBConnection *sql.DB, accountTypeUpd *datamodel.Accou
 				return sqlhandler.SQLConflict
 			}
 		}
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
 	}
 	rowsUpdated, err := result.RowsAffected()
 	if err != nil || rowsUpdated != 1 {
-		log.WithError(err).WithField("result", result).Error(ErrUnexpectedDBExecutionResult)
+		slog.Error(ErrUnexpectedDBExecutionResult.Error(), "error", err, "result", result)
 		return err
 	}
-	log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+	slog.Info("rowsUpdated", "rowsUpdated", rowsUpdated)
 
 	return nil
 }
@@ -150,19 +150,20 @@ func DeleteAccountTypeByID(DBConnection *sql.DB, accountTypeID string) error {
 
 	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.account_type WHERE type_id = $1")
 	if err != nil {
-		log.WithError(err).Error("cannot prepare delete statement")
+		slog.Error("cannot prepare delete statement", "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 	result, err := bdStatement.Exec(accountTypeID)
 
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
 	}
 	rowsUpdated, err := result.RowsAffected()
 	if err != nil || rowsUpdated > 1 {
-		log.WithError(err).WithField("result", result).Error(ErrUnexpectedDBExecutionResult)
+		slog.Error(ErrUnexpectedDBExecutionResult.Error(), "error", err, "result", result)
 	}
 	return nil
 }
+

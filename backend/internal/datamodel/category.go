@@ -3,7 +3,7 @@ package datamodel
 import (
 	"encoding/json"
 
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 // Category is to represent category info
@@ -45,6 +45,6 @@ func (c *Category) UnmarshalJSON(data []byte) error {
 	c.Description = tmp.Description
 	c.Expence = tmp.Expence
 
-	log.WithField("c", c).Info("unmarshaling")
+	slog.Info("unmarshaling", "c", c)
 	return nil
 }

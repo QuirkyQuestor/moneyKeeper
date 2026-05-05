@@ -1,23 +1,52 @@
+-- Create users table
+CREATE TABLE users (
+    user_id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Account types (System provided)
+CREATE TABLE account_type (
+    type_id UUID PRIMARY KEY,
+    name VARCHAR(40) UNIQUE NOT NULL,
+    description VARCHAR(200)
+);
+
+-- Accounts linked to users
 CREATE TABLE account (
-    accountId SERIAL,
-    typeId BIGINT UNSIGNED NOT NULL,
-    name VARCHAR(40) CHARACTER SET utf8 UNIQUE,
-    description VARCHAR(200) CHARACTER SET utf8,
-    active BOOLEAN
+    account_id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    type_id UUID NOT NULL REFERENCES account_type(type_id),
+    name VARCHAR(40) NOT NULL,
+    description VARCHAR(200),
+    active BOOLEAN DEFAULT TRUE,
+    UNIQUE(user_id, name)
 );
 
---  SERIAL is an alias for BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE.
-
-CREATE TABLE accountType (
-    typeId SERIAL,
-    name VARCHAR(40) CHARACTER SET utf8 UNIQUE,
-    description VARCHAR(200) CHARACTER SET utf8
-);
-
+-- Categories linked to users
 CREATE TABLE category (
-    categoryId SERIAL,
-    parentId BIGINT UNSIGNED NOT NULL,
-    name VARCHAR(40) CHARACTER SET utf8,
-    description VARCHAR(200) CHARACTER SET utf8,
-    expence BOOLEAN
+    category_id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES category(category_id),
+    name VARCHAR(40) NOT NULL,
+    description VARCHAR(200),
+    expence BOOLEAN DEFAULT TRUE,
+    UNIQUE(user_id, name)
 );
+
+-- Transactions linked to users
+CREATE TABLE transaction (
+    transaction_id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    account_from UUID NOT NULL REFERENCES account(account_id),
+    account_to UUID NOT NULL REFERENCES account(account_id),
+    category_id UUID NOT NULL REFERENCES category(category_id),
+    date TIMESTAMP WITH TIME ZONE NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    memo VARCHAR(255),
+    transfer_transaction_id UUID REFERENCES transaction(transaction_id)
+);
+
+-- Default account types will be inserted via backend or manual UUID generation
+-- Note: PostgreSQL native UUID type is used. IDs should be generated as UUIDv7 in the application layer.

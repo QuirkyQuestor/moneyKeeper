@@ -7,7 +7,7 @@ import (
 	"github.com/QuirkyQuestor/moneyKeeper/internal/datamodel"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler"
 	"github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 var (
@@ -23,14 +23,14 @@ func GetAllCategories(DBConnection *sql.DB) ([]datamodel.Category, error) {
 	var categories = []datamodel.Category{}
 	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM moneykeeper.category")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return categories, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
 	rows, err := bdStatement.Query()
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
 	}
 	defer rows.Close()
@@ -43,7 +43,7 @@ func GetAllCategories(DBConnection *sql.DB) ([]datamodel.Category, error) {
 		var expence bool
 		err := rows.Scan(&categoryId, &parentId, &name, &description, &expence)
 		if err != nil {
-			log.WithError(err).Error("Cold not parse row from the DB")
+			slog.Error("Cold not parse row from the DB", "error", err)
 		}
 		category := datamodel.Category{
 			CategoryID:  categoryId,
@@ -58,11 +58,11 @@ func GetAllCategories(DBConnection *sql.DB) ([]datamodel.Category, error) {
 }
 
 func AddCategory(DBConnection *sql.DB, category *datamodel.Category) error {
-	log.WithField("category", category).Info("The Category object")
+	slog.Info("The Category object", "category", category)
 
 	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.category(parent_id, name, description, expence) VALUES ($1, $2, $3, $4) RETURNING category_id;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 
@@ -77,7 +77,7 @@ func AddCategory(DBConnection *sql.DB, category *datamodel.Category) error {
 			}
 		}
 
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
 	}
 	return nil
@@ -88,7 +88,7 @@ func GetCategoryByID(DBConnection *sql.DB, categoryID string) (datamodel.Categor
 	var category datamodel.Category
 	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM moneykeeper.category WHERE category_id = $1")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return category, ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
@@ -97,10 +97,10 @@ func GetCategoryByID(DBConnection *sql.DB, categoryID string) (datamodel.Categor
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Info(ErrNoItemResponse)
+			slog.Info(ErrNoItemResponse.Error())
 			return category, ErrNoItemResponse
 		}
-		log.WithError(err).Error(ErrConvertingDBResponse)
+		slog.Error(ErrConvertingDBResponse.Error(), "error", err)
 		return category, ErrConvertingDBResponse
 	}
 
@@ -108,10 +108,10 @@ func GetCategoryByID(DBConnection *sql.DB, categoryID string) (datamodel.Categor
 }
 
 func UpdateCategory(DBConnection *sql.DB, category *datamodel.Category) error {
-	log.WithField("category", category).Info("The Category object")
+	slog.Info("The Category object", "category", category)
 	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.category SET parent_id=$1, name=$2, description=$3, expence=$4 WHERE category_id = $5")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 
@@ -119,18 +119,18 @@ func UpdateCategory(DBConnection *sql.DB, category *datamodel.Category) error {
 	result, err := bdStatement.Exec(category.ParentID, category.Name, category.Description, category.Expence, category.CategoryID)
 
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.WithError(err).Error("Cannot get rowsAffected")
+		slog.Error("Cannot get rowsAffected", "error", err)
 		return ErrSQLUpdate
 	}
-	log.WithField("rowsAffected", rowsAffected).Info("rowsAffected")
+	slog.Info("rowsAffected", "rowsAffected", rowsAffected)
 
 	if rowsAffected != 1 {
-		log.Error("The record does not seem to be updated.")
+		slog.Error("The record does not seem to be updated.")
 		return ErrSQLUpdate
 	}
 
@@ -141,26 +141,27 @@ func DeleteCategoryByID(DBConnection *sql.DB, categoryID string) error {
 
 	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.category WHERE category_id = $1")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 
 	result, err := bdStatement.Exec(categoryID)
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		log.WithError(err).Error("Cannot get rowsAffected for Delete")
+		slog.Error("Cannot get rowsAffected for Delete", "error", err)
 		return ErrSQLUpdate
 	}
 
 	if rowsAffected != 1 {
-		log.WithField("rowsAffected", rowsAffected).Info("The requested category did not exist in the DB Table.")
+		slog.Info("The requested category did not exist in the DB Table.", "rowsAffected", rowsAffected)
 	}
 
 	return nil
 }
+

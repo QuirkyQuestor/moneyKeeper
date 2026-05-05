@@ -7,7 +7,7 @@ import (
 	"github.com/QuirkyQuestor/moneyKeeper/internal/datamodel"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler"
 	"github.com/lib/pq"
-	log "github.com/sirupsen/logrus"
+	"log/slog"
 )
 
 var (
@@ -24,7 +24,7 @@ func GetAllAccounts(DBConnection *sql.DB) ([]datamodel.Account, error) {
 
 	bdStatement, err := DBConnection.Prepare("SELECT account_id, type_id, name, description, active FROM moneykeeper.account;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return accounts, ErrCannotPrepareSQLStatement
 	}
 
@@ -33,7 +33,7 @@ func GetAllAccounts(DBConnection *sql.DB) ([]datamodel.Account, error) {
 	rows, err := bdStatement.Query()
 
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
 	}
 	defer rows.Close()
@@ -47,7 +47,7 @@ func GetAllAccounts(DBConnection *sql.DB) ([]datamodel.Account, error) {
 
 		err = rows.Scan(&accountId, &typeId, &name, &description, &active)
 		if err != nil {
-			log.WithError(err).Error(ErrConvertingDBResponse)
+			slog.Error(ErrConvertingDBResponse.Error(), "error", err)
 			return accounts, ErrConvertingDBResponse
 		}
 
@@ -59,16 +59,16 @@ func GetAllAccounts(DBConnection *sql.DB) ([]datamodel.Account, error) {
 			Active:      active,
 		}
 		accounts = append(accounts, account)
-		log.WithField("account", account).Info("Got this...")
+		slog.Info("Got this...", "account", account)
 	}
 	return accounts, nil
 }
 func AddAccount(DBConnection *sql.DB, account datamodel.Account) (datamodel.Account, error) {
-	log.WithField("incomming_account", account).Info("Received Account object")
+	slog.Info("Received Account object", "incomming_account", account)
 
 	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.account(type_id, name, description, active) VALUES ($1, $2, $3, $4) RETURNING account_id;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return account, ErrCannotPrepareSQLStatement
 	}
 
@@ -82,7 +82,7 @@ func AddAccount(DBConnection *sql.DB, account datamodel.Account) (datamodel.Acco
 				return account, sqlhandler.SQLConflict
 			}
 		}
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return account, ErrSQLExecution
 	}
 	return account, nil
@@ -93,7 +93,7 @@ func GetAccountByID(DBConnection *sql.DB, accountID string) (datamodel.Account, 
 
 	bdStatement, err := DBConnection.Prepare("SELECT account_id, type_id, name, description, active FROM moneykeeper.account WHERE account_id = $1;")
 	if err != nil {
-		log.WithError(err).Error(ErrCannotPrepareSQLStatement)
+		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return account, ErrCannotPrepareSQLStatement
 	}
 
@@ -109,10 +109,10 @@ func GetAccountByID(DBConnection *sql.DB, accountID string) (datamodel.Account, 
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Info(ErrNoItemResponse)
+			slog.Info(ErrNoItemResponse.Error())
 			return account, ErrNoItemResponse
 		}
-		log.WithError(err).Error(ErrConvertingDBResponse)
+		slog.Error(ErrConvertingDBResponse.Error(), "error", err)
 		return account, ErrConvertingDBResponse
 	}
 	account = datamodel.Account{
@@ -130,22 +130,22 @@ func UpdateAccountByID(DBConnection *sql.DB, accountUpd *datamodel.Account) erro
 
 	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.account SET type_id=$1, name=$2, description=$3, active=$4 WHERE account_id = $5")
 	if err != nil {
-		log.WithError(err).Error("cannot prepare update statement")
+		slog.Error("cannot prepare update statement", "error", err)
 		return err
 	}
 	defer bdStatement.Close()
 	result, err := bdStatement.Exec(accountUpd.TypeID, accountUpd.Name, accountUpd.Description, accountUpd.Active, accountUpd.AccountID)
 
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return err
 	}
 	rowsUpdated, err := result.RowsAffected()
 	if err != nil || rowsUpdated != 1 {
-		log.WithError(err).WithField("result", result).Error(ErrUnexpectedDBExecutionResult)
+		slog.Error(ErrUnexpectedDBExecutionResult.Error(), "error", err, "result", result)
 		return err
 	}
-	log.WithField("rowsUpdated", rowsUpdated).Info("rowsUpdated")
+	slog.Info("rowsUpdated", "rowsUpdated", rowsUpdated)
 
 	return nil
 }
@@ -154,19 +154,20 @@ func DeleteAccountByID(DBConnection *sql.DB, accountID string) error {
 
 	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.account WHERE account_id = $1")
 	if err != nil {
-		log.WithError(err).Error("cannot prepare update statement")
+		slog.Error("cannot prepare update statement", "error", err)
 		return err
 	}
 	defer bdStatement.Close()
 	result, err := bdStatement.Exec(accountID)
 
 	if err != nil {
-		log.WithError(err).Error(ErrSQLExecution)
+		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return err
 	}
 	rowsUpdated, err := result.RowsAffected()
 	if err != nil || rowsUpdated > 1 {
-		log.WithError(err).WithField("result", result).Error(ErrUnexpectedDBExecutionResult)
+		slog.Error(ErrUnexpectedDBExecutionResult.Error(), "error", err, "result", result)
 	}
 	return nil
 }
+
