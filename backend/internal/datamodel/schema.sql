@@ -1,6 +1,6 @@
 -- Create users table
 CREATE TABLE users (
-    user_id UUID PRIMARY KEY,
+    user_id UUID PRIMARY KEY DEFAULT uuidv7(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -8,14 +8,14 @@ CREATE TABLE users (
 
 -- Account types (System provided)
 CREATE TABLE account_type (
-    type_id UUID PRIMARY KEY,
+    type_id UUID PRIMARY KEY DEFAULT uuidv7(),
     name VARCHAR(40) UNIQUE NOT NULL,
     description VARCHAR(200)
 );
 
 -- Accounts linked to users
 CREATE TABLE account (
-    account_id UUID PRIMARY KEY,
+    account_id UUID PRIMARY KEY DEFAULT uuidv7(),
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     type_id UUID NOT NULL REFERENCES account_type(type_id),
     name VARCHAR(40) NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE account (
 
 -- Categories linked to users
 CREATE TABLE category (
-    category_id UUID PRIMARY KEY,
+    category_id UUID PRIMARY KEY DEFAULT uuidv7(),
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     parent_id UUID REFERENCES category(category_id),
     name VARCHAR(40) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE category (
 
 -- Transactions linked to users
 CREATE TABLE transaction (
-    transaction_id UUID PRIMARY KEY,
+    transaction_id UUID PRIMARY KEY DEFAULT uuidv7(),
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     account_from UUID NOT NULL REFERENCES account(account_id),
     account_to UUID NOT NULL REFERENCES account(account_id),

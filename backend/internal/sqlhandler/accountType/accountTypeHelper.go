@@ -4,10 +4,11 @@ import (
 	"database/sql"
 	"errors"
 
+	"log/slog"
+
 	"github.com/QuirkyQuestor/moneyKeeper/internal/datamodel"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler"
 	"github.com/lib/pq"
-	"log/slog"
 )
 
 var (
@@ -166,4 +167,3 @@ func DeleteAccountTypeByID(DBConnection *sql.DB, accountTypeID string) error {
 	}
 	return nil
 }
-

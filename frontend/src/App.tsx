@@ -6,6 +6,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Transactions from './views/Transactions/Transactions';
 import Login from './views/Login/Login';
 import WIP from './views/WIP/WIP';
+import AccountTypes from './views/AccountTypes/AccountTypes';
+import Accounts from './views/Accounts/Accounts';
 
 const App: React.FC = () => {
   return (
@@ -29,12 +31,10 @@ const App: React.FC = () => {
             
             <Route path="accounts" element={
               <ProtectedRoute>
-                <WIP name="Accounts" />
+                <Accounts />
               </ProtectedRoute>
             } />
             
-import AccountTypes from './views/AccountTypes/AccountTypes';
-...
             <Route path="account-types" element={
               <ProtectedRoute>
                 <AccountTypes />
