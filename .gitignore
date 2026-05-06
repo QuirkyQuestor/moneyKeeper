@@ -1,8 +1,9 @@
 # bin files
 backend/bin
 
-# Compiled Java class files
-*.class
+# Configs
+backend/dbconfig.yaml
+
 
 # Compiled Python bytecode
 *.py[cod]
@@ -10,19 +11,8 @@ backend/bin
 # Log files
 *.log
 
-# Package files
-*.jar
-
-# Maven
-target/
-
 # Unit test reports
 TEST*.xml
-
-# Applications
-*.app
-*.exe
-*.war
 
 # Large media files
 *.mp4
@@ -34,16 +24,6 @@ TEST*.xml
 
 # db files
 datadir/
-
-
-# See http://help.github.com/ignore-files/ for more about ignoring files.
-
-# Compiled output
-/dist
-frontend/dist
-/tmp
-/out-tsc
-/bazel-out
 
 # Node
 /node_modules
@@ -66,15 +46,6 @@ yarn-error.log
 !.vscode/launch.json
 !.vscode/extensions.json
 .history/*
-
-# Miscellaneous
-/.angular/cache
-.sass-cache/
-/connect.lock
-/coverage
-/libpeerconnection.log
-testem.log
-/typings
 
 # System files
 .DS_Store

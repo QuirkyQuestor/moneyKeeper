@@ -95,6 +95,14 @@ const Accounts: React.FC = () => {
           <select value={formData.typeId} onChange={e => setFormData({...formData, typeId: e.target.value})}>
             {accountTypes.map(t => <option key={t.typeId} value={t.typeId}>{t.name}</option>)}
           </select>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={formData.active} 
+              onChange={e => setFormData({...formData, active: e.target.checked})} 
+            />
+            Active
+          </label>
           <button onClick={handleSave}>Save</button>
         </div>
       </Modal>
