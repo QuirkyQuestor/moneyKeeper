@@ -9,7 +9,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
       # Automatically initialize the schema on first run
       - ./backend/internal/datamodel/schema.sql:/docker-entrypoint-initdb.d/init.sql
 
@@ -17,7 +17,7 @@ services:
     image: dpage/pgadmin4
     container_name: moneykeeper-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@moneykeeper.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@moneykeeper.dev}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
       - "5050:80"

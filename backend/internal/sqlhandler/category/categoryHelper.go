@@ -19,16 +19,16 @@ var (
 	ErrNoItemResponse            = errors.New("DB query returned no result")
 )
 
-func GetAllCategories(DBConnection *sql.DB) ([]datamodel.Category, error) {
+func GetAllCategories(DBConnection *sql.DB, userID string) ([]datamodel.Category, error) {
 	var categories = []datamodel.Category{}
-	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM moneykeeper.category")
+	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM category WHERE user_id = $1")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return categories, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
-	rows, err := bdStatement.Query()
+	rows, err := bdStatement.Query(userID)
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
@@ -57,10 +57,10 @@ func GetAllCategories(DBConnection *sql.DB) ([]datamodel.Category, error) {
 	return categories, nil
 }
 
-func AddCategory(DBConnection *sql.DB, category *datamodel.Category) error {
+func AddCategory(DBConnection *sql.DB, userID string, category *datamodel.Category) error {
 	slog.Info("The Category object", "category", category)
 
-	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.category(parent_id, name, description, expence) VALUES ($1, $2, $3, $4) RETURNING category_id;")
+	bdStatement, err := DBConnection.Prepare("INSERT INTO category(user_id, parent_id, name, description, expence) VALUES ($1, $2, $3, $4, $5) RETURNING category_id;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
@@ -68,7 +68,7 @@ func AddCategory(DBConnection *sql.DB, category *datamodel.Category) error {
 
 	defer bdStatement.Close()
 
-	err = bdStatement.QueryRow(category.ParentID, category.Name, category.Description, category.Expence).Scan(&category.CategoryID)
+	err = bdStatement.QueryRow(userID, category.ParentID, category.Name, category.Description, category.Expence).Scan(&category.CategoryID)
 
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
@@ -83,17 +83,17 @@ func AddCategory(DBConnection *sql.DB, category *datamodel.Category) error {
 	return nil
 }
 
-func GetCategoryByID(DBConnection *sql.DB, categoryID string) (datamodel.Category, error) {
+func GetCategoryByID(DBConnection *sql.DB, userID string, categoryID string) (datamodel.Category, error) {
 
 	var category datamodel.Category
-	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM moneykeeper.category WHERE category_id = $1")
+	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM category WHERE category_id = $1 AND user_id = $2")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return category, ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 
-	err = bdStatement.QueryRow(categoryID).Scan(&category.CategoryID, &category.ParentID, &category.Name, &category.Description, &category.Expence)
+	err = bdStatement.QueryRow(categoryID, userID).Scan(&category.CategoryID, &category.ParentID, &category.Name, &category.Description, &category.Expence)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -107,16 +107,16 @@ func GetCategoryByID(DBConnection *sql.DB, categoryID string) (datamodel.Categor
 	return category, nil
 }
 
-func UpdateCategory(DBConnection *sql.DB, category *datamodel.Category) error {
+func UpdateCategory(DBConnection *sql.DB, userID string, category *datamodel.Category) error {
 	slog.Info("The Category object", "category", category)
-	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.category SET parent_id=$1, name=$2, description=$3, expence=$4 WHERE category_id = $5")
+	bdStatement, err := DBConnection.Prepare("UPDATE category SET parent_id=$1, name=$2, description=$3, expence=$4 WHERE category_id = $5 AND user_id = $6")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
-	result, err := bdStatement.Exec(category.ParentID, category.Name, category.Description, category.Expence, category.CategoryID)
+	result, err := bdStatement.Exec(category.ParentID, category.Name, category.Description, category.Expence, category.CategoryID, userID)
 
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
@@ -137,16 +137,16 @@ func UpdateCategory(DBConnection *sql.DB, category *datamodel.Category) error {
 	return nil
 }
 
-func DeleteCategoryByID(DBConnection *sql.DB, categoryID string) error {
+func DeleteCategoryByID(DBConnection *sql.DB, userID string, categoryID string) error {
 
-	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.category WHERE category_id = $1")
+	bdStatement, err := DBConnection.Prepare("DELETE FROM category WHERE category_id = $1 AND user_id = $2")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 
-	result, err := bdStatement.Exec(categoryID)
+	result, err := bdStatement.Exec(categoryID, userID)
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
@@ -164,4 +164,3 @@ func DeleteCategoryByID(DBConnection *sql.DB, categoryID string) error {
 
 	return nil
 }
-

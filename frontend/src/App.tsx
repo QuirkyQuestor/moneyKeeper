@@ -33,9 +33,11 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } />
             
+import AccountTypes from './views/AccountTypes/AccountTypes';
+...
             <Route path="account-types" element={
               <ProtectedRoute>
-                <WIP name="Account Types" />
+                <AccountTypes />
               </ProtectedRoute>
             } />
             

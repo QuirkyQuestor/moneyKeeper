@@ -21,6 +21,7 @@ import (
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/accountType"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/category"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/transaction"
+	"github.com/lib/pq"
 	"log/slog"
 )
 
@@ -63,7 +64,14 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	var userID string
 	err = DBConnection.QueryRow("INSERT INTO users(user_id, email, password_hash) VALUES($1, $2, $3) RETURNING user_id", newUserID, creds.Email, hash).Scan(&userID)
 	if err != nil {
-		respondWithError(w, http.StatusConflict, "Email already exists")
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code.Name() == sqlhandler.PGErrUniqueViolation {
+				respondWithError(w, http.StatusConflict, "Email already exists")
+				return
+			}
+		}
+		slog.Error("Database error during registration", "error", err)
+		respondWithError(w, http.StatusInternalServerError, "Registration failed due to server error")
 		return
 	}
 
@@ -76,24 +84,36 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+		slog.Error("Could not decode login body", "error", err)
 		respondWithError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
+	slog.Info("Login attempt received", "email", creds.Email)
+
 	var userID string
 	var hash string
 	err := DBConnection.QueryRow("SELECT user_id, password_hash FROM users WHERE email = $1", creds.Email).Scan(&userID, &hash)
-	if err != nil || !auth.CheckPasswordHash(creds.Password, hash) {
+	if err != nil {
+		slog.Warn("Login failed: user not found", "email", creds.Email, "error", err)
+		respondWithError(w, http.StatusUnauthorized, "Invalid email or password")
+		return
+	}
+
+	if !auth.CheckPasswordHash(creds.Password, hash) {
+		slog.Warn("Login failed: incorrect password", "email", creds.Email)
 		respondWithError(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 
 	token, expiresAt, err := auth.GenerateJWT(userID)
 	if err != nil {
+		slog.Error("Could not generate JWT", "error", err)
 		respondWithError(w, http.StatusInternalServerError, "Could not generate token")
 		return
 	}
 
+	slog.Info("Login successful, setting cookie", "userID", userID)
 	auth.SetAuthCookie(w, token, expiresAt)
 	respondWithJSON(w, http.StatusOK, map[string]string{"message": "Logged in successfully"})
 }
@@ -140,7 +160,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 }
 
 func getAllAccountsHandler(w http.ResponseWriter, r *http.Request) {
-	accounts, err := account.GetAllAccounts(DBConnection)
+	userID := r.Context().Value("user_id").(string)
+	accounts, err := account.GetAllAccounts(DBConnection, userID)
 	if err != nil {
 		slog.Error("An error has happened during GetAllAccounts DB query", "error", err)
 		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -166,7 +187,8 @@ func addNewAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newAccount, err = account.AddAccount(DBConnection, newAccount)
+	userID := r.Context().Value("user_id").(string)
+	newAccount, err = account.AddAccount(DBConnection, userID, newAccount)
 	if err != nil {
 		if err == sqlhandler.SQLConflict {
 			slog.Error("Account with this name already exists", "error", err)
@@ -184,8 +206,9 @@ func addNewAccountHandler(w http.ResponseWriter, r *http.Request) {
 func getAccountByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 	slog.Info("accountID to process", "id", idParam)
+	userID := r.Context().Value("user_id").(string)
 
-	getAccount, err := account.GetAccountByID(DBConnection, idParam)
+	getAccount, err := account.GetAccountByID(DBConnection, userID, idParam)
 	if err == account.ErrNoItemResponse {
 		respondWithError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
 		return
@@ -210,8 +233,9 @@ func updateAccountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	accountUpd.AccountID = idParam
+	userID := r.Context().Value("user_id").(string)
 
-	err = account.UpdateAccountByID(DBConnection, accountUpd)
+	err = account.UpdateAccountByID(DBConnection, userID, accountUpd)
 
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -222,8 +246,9 @@ func updateAccountHandler(w http.ResponseWriter, r *http.Request) {
 func deleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 	slog.Info("accountID to process", "id", idParam)
+	userID := r.Context().Value("user_id").(string)
 
-	err := account.DeleteAccountByID(DBConnection, idParam)
+	err := account.DeleteAccountByID(DBConnection, userID, idParam)
 	if err != nil {
 		slog.Error("Could not delete the Account", "error", err, "accountID", idParam)
 		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -336,7 +361,8 @@ func deleteAccountTypeByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 // Get All Categories from DB
 func getAllCategoriesHandler(w http.ResponseWriter, r *http.Request) {
-	categories, err := category.GetAllCategories(DBConnection)
+	userID := r.Context().Value("user_id").(string)
+	categories, err := category.GetAllCategories(DBConnection, userID)
 	if err != nil {
 		slog.Error("Could not do GetAllCategories", "error", err)
 		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -363,7 +389,8 @@ func addCategoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = category.AddCategory(DBConnection, &newCategory)
+	userID := r.Context().Value("user_id").(string)
+	err = category.AddCategory(DBConnection, userID, &newCategory)
 	if err != nil {
 		if err == sqlhandler.SQLConflict {
 			slog.Error("Category with this name already exists", "error", err)
@@ -381,8 +408,9 @@ func addCategoryHandler(w http.ResponseWriter, r *http.Request) {
 func getCategoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 	slog.Info("Processing categoryID", "id", idParam)
+	userID := r.Context().Value("user_id").(string)
 
-	getCategory, err := category.GetCategoryByID(DBConnection, idParam)
+	getCategory, err := category.GetCategoryByID(DBConnection, userID, idParam)
 
 	if err != nil {
 		if err == category.ErrNoItemResponse {
@@ -411,12 +439,8 @@ func updateCategoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	*categoryUpd.CategoryID = idParam
-	if err != nil {
-		slog.Error("Could not parse the Category ID", "error", err, "categoryUpd", categoryUpd)
-		respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
-		return
-	}
-	err = category.UpdateCategory(DBConnection, categoryUpd)
+	userID := r.Context().Value("user_id").(string)
+	err = category.UpdateCategory(DBConnection, userID, categoryUpd)
 
 	if err != nil {
 		slog.Error("could not update the Category", "error", err, "categoryUpd", categoryUpd)
@@ -430,8 +454,9 @@ func updateCategoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 func deleteCategorybyIDHandler(w http.ResponseWriter, r *http.Request) {
 	idParam := chi.URLParam(r, "id")
 	slog.Info("Processing categoryID", "id", idParam)
+	userID := r.Context().Value("user_id").(string)
 
-	err := category.DeleteCategoryByID(DBConnection, idParam)
+	err := category.DeleteCategoryByID(DBConnection, userID, idParam)
 	if err != nil {
 		slog.Error("could not delete the Category", "error", err, "categoryID", idParam)
 		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -443,6 +468,7 @@ func deleteCategorybyIDHandler(w http.ResponseWriter, r *http.Request) {
 
 func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	queries := r.URL.Query()
+	userID := r.Context().Value("user_id").(string)
 	if accountFrom, ok := queries["accountFrom"]; ok {
 		// Check here if `accountFrom` is in valid format
 		var re = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
@@ -453,7 +479,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		transactions, err := transaction.GetTransactionsByAccountId(DBConnection, accountFrom[0])
+		transactions, err := transaction.GetTransactionsByAccountId(DBConnection, userID, accountFrom[0])
 		if err != nil {
 			slog.Error("Could not do GetTransactionByID", "accountFrom", accountFrom[0], "error", err)
 			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -464,7 +490,7 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		// Get transaction from DB
-		transactions, err := transaction.GetAllTransactions(DBConnection)
+		transactions, err := transaction.GetAllTransactions(DBConnection, userID)
 		if err != nil {
 			slog.Error("Could not do GetAllTransactions", "error", err)
 			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -497,7 +523,8 @@ func addTransactionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newTransaction, err = transaction.AddTransaction(DBConnection, newTransaction)
+	userID := r.Context().Value("user_id").(string)
+	newTransaction, err = transaction.AddTransaction(DBConnection, userID, newTransaction)
 	if err != nil {
 		slog.Error("An error has happened during the AddTransaction DB operation", "error", err, "IncominBody", r.Body)
 		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -510,8 +537,9 @@ func getTransactionByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	idParam := chi.URLParam(r, "id")
 	slog.Info("Processing transactionID", "id", idParam)
+	userID := r.Context().Value("user_id").(string)
 
-	getTransaction, err := transaction.GetTransactionByID(DBConnection, idParam)
+	getTransaction, err := transaction.GetTransactionByID(DBConnection, userID, idParam)
 
 	if err != nil {
 		if err == transaction.ErrNoItemResponse {
@@ -542,8 +570,9 @@ func updateTransactionByIDHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	transactionUpd.TransactionID = idParam
+	userID := r.Context().Value("user_id").(string)
 
-	err = transaction.UpdateTransaction(DBConnection, transactionUpd)
+	err = transaction.UpdateTransaction(DBConnection, userID, transactionUpd)
 
 	if err != nil {
 		slog.Error("Could not update the Transaction", "error", err, "transactionUpd", transactionUpd)
@@ -562,8 +591,9 @@ func deleteTransactionByIDHandler(w http.ResponseWriter, r *http.Request) {
 
 	idParam := chi.URLParam(r, "id")
 	slog.Info("Processing transactionID", "id", idParam)
+	userID := r.Context().Value("user_id").(string)
 
-	err := transaction.DeleteTransactionByID(DBConnection, idParam)
+	err := transaction.DeleteTransactionByID(DBConnection, userID, idParam)
 	if err != nil {
 		slog.Error("Could not delete the transaction", "error", err, "transactionID", idParam)
 		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
@@ -581,9 +611,16 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+			origin := r.Header.Get("Origin")
+			if origin != "" {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			} else {
+				w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+			}
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+
 			if r.Method == "OPTIONS" {
 				w.WriteHeader(http.StatusOK)
 				return

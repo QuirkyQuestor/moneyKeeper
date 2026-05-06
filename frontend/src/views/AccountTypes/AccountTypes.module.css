@@ -1,0 +1,8 @@
+.container { padding: 2rem; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.addButton { background: var(--accent); color: white; padding: 0.5rem 1rem; border-radius: 4px; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 1rem; border-bottom: 1px solid var(--border); }
+.form { display: flex; flex-direction: column; gap: 1rem; }
+.form input { padding: 0.5rem; }
+.form button { background: var(--accent); color: white; padding: 0.5rem; border-radius: 4px; }

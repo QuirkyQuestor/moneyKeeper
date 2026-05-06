@@ -22,7 +22,7 @@ var (
 func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 	var accountTypes = []datamodel.AccountType{}
 
-	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM moneykeeper.account_type;")
+	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM account_type;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return nil, ErrCannotPrepareSQLStatement
@@ -61,7 +61,7 @@ func GetAllAccountTypes(DBConnection *sql.DB) ([]datamodel.AccountType, error) {
 
 func AddAccountType(DBConnection *sql.DB, accountType datamodel.AccountType) (datamodel.AccountType, error) {
 	slog.Info("The AccountType object", "accountType", accountType)
-	bdStatement, err := DBConnection.Prepare(`INSERT INTO moneykeeper.account_type(name, description) VALUES ($1, $2) RETURNING type_id;`)
+	bdStatement, err := DBConnection.Prepare(`INSERT INTO account_type(name, description) VALUES ($1, $2) RETURNING type_id;`)
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return accountType, ErrCannotPrepareSQLStatement
@@ -86,7 +86,7 @@ func AddAccountType(DBConnection *sql.DB, accountType datamodel.AccountType) (da
 func GetAccountTypeByID(DBConnection *sql.DB, accountTyepID string) (*datamodel.AccountType, error) {
 	var accountType *datamodel.AccountType
 
-	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM moneykeeper.account_type WHERE type_id = $1;")
+	bdStatement, err := DBConnection.Prepare("SELECT type_id, name, description FROM account_type WHERE type_id = $1;")
 	if err != nil {
 		slog.Error("Cannot prepare SELECT statement", "error", err)
 		return nil, ErrCannotPrepareSQLStatement
@@ -119,7 +119,7 @@ func GetAccountTypeByID(DBConnection *sql.DB, accountTyepID string) (*datamodel.
 
 func UpdateAccountTypeByID(DBConnection *sql.DB, accountTypeUpd *datamodel.AccountType) error {
 
-	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.account_type SET name=$1, description=$2 WHERE type_id = $3")
+	bdStatement, err := DBConnection.Prepare("UPDATE account_type SET name=$1, description=$2 WHERE type_id = $3")
 	if err != nil {
 		slog.Error("cannot prepare update statement", "error", err)
 		return ErrCannotPrepareSQLStatement
@@ -148,7 +148,7 @@ func UpdateAccountTypeByID(DBConnection *sql.DB, accountTypeUpd *datamodel.Accou
 
 func DeleteAccountTypeByID(DBConnection *sql.DB, accountTypeID string) error {
 
-	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.account_type WHERE type_id = $1")
+	bdStatement, err := DBConnection.Prepare("DELETE FROM account_type WHERE type_id = $1")
 	if err != nil {
 		slog.Error("cannot prepare delete statement", "error", err)
 		return ErrCannotPrepareSQLStatement

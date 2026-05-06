@@ -22,17 +22,21 @@ const Transactions: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const isInitialMount = React.useRef(true);
 
   useEffect(() => {
     const fetchAccounts = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/account`);
+        const response = await fetch(`${API_BASE_URL}/account`, {
+          credentials: 'include',
+        });
         if (!response.ok) throw new Error('Failed to fetch accounts');
         const data: Account[] = await response.json();
         setAccounts(data);
         
         if (data.length > 0) {
-          setSelectedAccountId(data[0].accountId);
+          // If already set by parent/other logic, don't overwrite
+          setSelectedAccountId(prev => prev || data[0].accountId);
         }
       } catch (err) {
         setError('Error connecting to API. Please ensure the backend is running.');
@@ -46,11 +50,19 @@ const Transactions: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    // Prevent fetch on initial mount if ID is set by account fetcher
+    if (isInitialMount.current) {
+        isInitialMount.current = false;
+        if (!selectedAccountId) return;
+    }
+
     const fetchTransactions = async () => {
       if (!selectedAccountId) return;
       
       try {
-        const response = await fetch(`${API_BASE_URL}/transaction?accountFrom=${selectedAccountId}`);
+        const response = await fetch(`${API_BASE_URL}/transaction?accountFrom=${selectedAccountId}`, {
+          credentials: 'include',
+        });
         if (!response.ok) throw new Error('Failed to fetch transactions');
         const data: Transaction[] = await response.json();
         setTransactions(data);

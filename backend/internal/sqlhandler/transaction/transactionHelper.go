@@ -20,26 +20,17 @@ var (
 	ErrNoItemResponse            = errors.New("DB query returned no result")
 )
 
-func GetAllTransactions(DBConnection *sql.DB) ([]datamodel.Transaction, error) {
+func GetAllTransactions(DBConnection *sql.DB, userID string) ([]datamodel.Transaction, error) {
 	var transactions = []datamodel.Transaction{}
 
-	// json:"transaction_id"`
-	// json:"account_from"`
-	// json:"date"`
-	// json:"amount"`
-	// json:"account_to"`
-	// json:"memo"`
-	// json:"category_id"`
-	// json:"transfer_transaction_id"` // omit empty
-
-	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction;")
+	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM transaction WHERE user_id = $1;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return transactions, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
-	rows, err := bdStatement.Query()
+	rows, err := bdStatement.Query(userID)
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
@@ -75,17 +66,17 @@ func GetAllTransactions(DBConnection *sql.DB) ([]datamodel.Transaction, error) {
 	return transactions, nil
 }
 
-func GetTransactionsByAccountId(DBConnection *sql.DB, accountFrom string) ([]datamodel.Transaction, error) {
+func GetTransactionsByAccountId(DBConnection *sql.DB, userID string, accountFrom string) ([]datamodel.Transaction, error) {
 	var transactions = []datamodel.Transaction{}
 
-	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction WHERE account_from = $1;")
+	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM transaction WHERE account_from = $1 AND user_id = $2;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return transactions, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
-	rows, err := bdStatement.Query(accountFrom)
+	rows, err := bdStatement.Query(accountFrom, userID)
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return nil, ErrSQLExecution
@@ -121,9 +112,9 @@ func GetTransactionsByAccountId(DBConnection *sql.DB, accountFrom string) ([]dat
 	return transactions, nil
 }
 
-func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (datamodel.Transaction, error) {
+func AddTransaction(DBConnection *sql.DB, userID string, transaction datamodel.Transaction) (datamodel.Transaction, error) {
 	slog.Info("The Transaction object", "transaction", transaction)
-	bdStatement, err := DBConnection.Prepare("INSERT INTO moneykeeper.transaction(account_from, date, amount, account_to, memo, category_id, transfer_transaction_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING transaction_id;")
+	bdStatement, err := DBConnection.Prepare("INSERT INTO transaction(user_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING transaction_id;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return transaction, ErrCannotPrepareSQLStatement
@@ -131,7 +122,7 @@ func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (da
 
 	defer bdStatement.Close()
 
-	err = bdStatement.QueryRow(transaction.AccountFrom, transaction.Date, transaction.Amount, transaction.AccountTo, transaction.Memo, transaction.CategoryID, transaction.TransferTransactionID).Scan(&transaction.TransactionID)
+	err = bdStatement.QueryRow(userID, transaction.AccountFrom, transaction.Date, transaction.Amount, transaction.AccountTo, transaction.Memo, transaction.CategoryID, transaction.TransferTransactionID).Scan(&transaction.TransactionID)
 
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
@@ -146,17 +137,17 @@ func AddTransaction(DBConnection *sql.DB, transaction datamodel.Transaction) (da
 	return transaction, nil
 }
 
-func GetTransactionByID(DBConnection *sql.DB, transactionID string) (*datamodel.Transaction, error) {
+func GetTransactionByID(DBConnection *sql.DB, userID string, transactionID string) (*datamodel.Transaction, error) {
 
 	var transaction datamodel.Transaction
-	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM moneykeeper.transaction WHERE transaction_id = $1")
+	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM transaction WHERE transaction_id = $1 AND user_id = $2")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return nil, ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 
-	err = bdStatement.QueryRow(transactionID).Scan(&transaction.TransactionID, &transaction.AccountFrom, &transaction.Date,
+	err = bdStatement.QueryRow(transactionID, userID).Scan(&transaction.TransactionID, &transaction.AccountFrom, &transaction.Date,
 		&transaction.Amount, &transaction.AccountTo, &transaction.Memo, &transaction.CategoryID, &transaction.TransferTransactionID)
 
 	if err != nil {
@@ -171,15 +162,15 @@ func GetTransactionByID(DBConnection *sql.DB, transactionID string) (*datamodel.
 	return &transaction, nil
 }
 
-func UpdateTransaction(DBConnection *sql.DB, transaction *datamodel.Transaction) error {
+func UpdateTransaction(DBConnection *sql.DB, userID string, transaction *datamodel.Transaction) error {
 	slog.Info("The Transaction object", "transaction", transaction)
-	bdStatement, err := DBConnection.Prepare("UPDATE moneykeeper.transaction SET account_from=$1, date=$2, amount=$3, account_to=$4, memo=$5, category_id=$6, transfer_transaction_id=$7 WHERE transaction_id = $8")
+	bdStatement, err := DBConnection.Prepare("UPDATE transaction SET account_from=$1, date=$2, amount=$3, account_to=$4, memo=$5, category_id=$6, transfer_transaction_id=$7 WHERE transaction_id = $8 AND user_id = $9")
 	if err != nil {
 		slog.Error("cannot prepare update statement", "error", err)
 	}
 
 	defer bdStatement.Close()
-	result, err := bdStatement.Exec(transaction.AccountFrom, transaction.Date, transaction.Amount, transaction.AccountTo, transaction.Memo, transaction.CategoryID, transaction.TransferTransactionID, transaction.TransactionID)
+	result, err := bdStatement.Exec(transaction.AccountFrom, transaction.Date, transaction.Amount, transaction.AccountTo, transaction.Memo, transaction.CategoryID, transaction.TransferTransactionID, transaction.TransactionID, userID)
 
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
@@ -200,16 +191,16 @@ func UpdateTransaction(DBConnection *sql.DB, transaction *datamodel.Transaction)
 	return nil
 }
 
-func DeleteTransactionByID(DBConnection *sql.DB, transactionID string) error {
+func DeleteTransactionByID(DBConnection *sql.DB, userID string, transactionID string) error {
 
-	bdStatement, err := DBConnection.Prepare("DELETE FROM moneykeeper.transaction WHERE transaction_id = $1")
+	bdStatement, err := DBConnection.Prepare("DELETE FROM transaction WHERE transaction_id = $1 AND user_id = $2")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 
-	result, err := bdStatement.Exec(transactionID)
+	result, err := bdStatement.Exec(transactionID, userID)
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
 		return ErrSQLExecution
@@ -227,4 +218,3 @@ func DeleteTransactionByID(DBConnection *sql.DB, transactionID string) error {
 
 	return nil
 }
-
