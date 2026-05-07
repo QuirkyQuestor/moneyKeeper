@@ -13,6 +13,7 @@ interface Account {
   name: string;
   description: string;
   active: boolean;
+  isExternal: boolean;
 }
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -26,7 +27,7 @@ const Accounts: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', typeId: '', active: true });
+  const [formData, setFormData] = useState({ name: '', description: '', typeId: '', active: true, isExternal: false });
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,12 +66,12 @@ const Accounts: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.header}>
         <h2>Accounts</h2>
-        <button className={styles.addButton} onClick={() => { setEditingAccount(null); setFormData({name: '', description: '', typeId: accountTypes[0]?.typeId || '', active: true}); setIsModalOpen(true); }}>+ Add Account</button>
+        <button className={styles.addButton} onClick={() => { setEditingAccount(null); setFormData({name: '', description: '', typeId: accountTypes[0]?.typeId || '', active: true, isExternal: false}); setIsModalOpen(true); }}>+ Add Account</button>
       </div>
 
       <div className={styles.tableContainer}>
         <table className={styles.table}>
-          <thead><tr><th>Name</th><th>Type</th><th>Description</th><th>Active</th><th>Actions</th></tr></thead>
+          <thead><tr><th>Name</th><th>Type</th><th>Description</th><th>Active</th><th>External</th><th>Actions</th></tr></thead>
           <tbody>
             {accounts.map(a => (
               <tr key={a.accountId}>
@@ -78,8 +79,9 @@ const Accounts: React.FC = () => {
                 <td>{accountTypes.find(t => t.typeId === a.typeId)?.name || 'Unknown'}</td>
                 <td>{a.description}</td>
                 <td>{a.active ? 'Yes' : 'No'}</td>
+                <td>{a.isExternal ? 'Yes' : 'No'}</td>
                 <td className={styles.actionCell}>
-                  <button className={styles.iconButton} onClick={() => { setEditingAccount(a); setFormData({name: a.name, description: a.description, typeId: a.typeId, active: a.active}); setIsModalOpen(true); }}><EditIcon /></button>
+                  <button className={styles.iconButton} onClick={() => { setEditingAccount(a); setFormData({name: a.name, description: a.description, typeId: a.typeId, active: a.active, isExternal: a.isExternal}); setIsModalOpen(true); }}><EditIcon /></button>
                   <button className={styles.iconButton} onClick={() => { setDeletingId(a.accountId); setIsDeleteModalOpen(true); }}><DeleteIcon /></button>
                 </td>
               </tr>
@@ -102,6 +104,14 @@ const Accounts: React.FC = () => {
               onChange={e => setFormData({...formData, active: e.target.checked})} 
             />
             Active
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={formData.isExternal} 
+              onChange={e => setFormData({...formData, isExternal: e.target.checked})} 
+            />
+            External/Third Party
           </label>
           <button onClick={handleSave}>Save</button>
         </div>

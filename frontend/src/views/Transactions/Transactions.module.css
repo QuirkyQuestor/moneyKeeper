@@ -56,6 +56,8 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   box-shadow: var(--shadow-1);
+  border: none;
+  cursor: pointer;
 }
 
 .addButton:hover {
@@ -107,13 +109,71 @@
   border-bottom: none;
 }
 
+.actionCell {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.iconButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.iconButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form input,
+.form select,
+.form textarea {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+}
+
+.form textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form button {
+  background: var(--accent);
+  color: white;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+}
+
 .pagination {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   padding: 1.25rem 1.5rem;
   gap: 0.75rem;
   background-color: #f8f9fa;
   border-top: 1px solid var(--border);
+}
+
+.pageInfo {
+  margin-right: auto;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
 }
 
 .pageButton {
@@ -124,9 +184,15 @@
   color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
+  cursor: pointer;
 }
 
-.pageButton:hover:not(.pageButtonActive) {
+.pageButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageButton:hover:not(.pageButtonActive):not(:disabled) {
   background-color: #f1f3f4;
 }
 
@@ -134,4 +200,29 @@
   background-color: var(--accent);
   color: var(--white);
   border-color: var(--accent);
+}
+
+.confirmModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.btnCancel {
+  background: var(--text-secondary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.btnDelete {
+  background: #ef4444;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
 }

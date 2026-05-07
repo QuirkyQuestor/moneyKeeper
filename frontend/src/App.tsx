@@ -8,6 +8,8 @@ import Login from './views/Login/Login';
 import WIP from './views/WIP/WIP';
 import AccountTypes from './views/AccountTypes/AccountTypes';
 import Accounts from './views/Accounts/Accounts';
+import Categories from './views/Categories/Categories';
+import Reports from './views/Reports/Reports';
 
 const App: React.FC = () => {
   return (
@@ -25,7 +27,7 @@ const App: React.FC = () => {
             
             <Route path="categories" element={
               <ProtectedRoute>
-                <WIP name="Categories" />
+                <Categories />
               </ProtectedRoute>
             } />
             
@@ -43,7 +45,7 @@ const App: React.FC = () => {
             
             <Route path="reports" element={
               <ProtectedRoute>
-                <WIP name="Reports" />
+                <Reports />
               </ProtectedRoute>
             } />
           </Route>
