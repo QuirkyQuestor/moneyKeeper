@@ -7,4 +7,5 @@ type Account struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Active      bool   `json:"active"`
+	IsExternal  bool   `json:"isExternal"`
 }

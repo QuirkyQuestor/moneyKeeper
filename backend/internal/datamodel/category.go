@@ -11,6 +11,7 @@ type Category struct {
 	CategoryID  *string `json:"categoryId,omitempty"`
 	ParentID    *string `json:"parentId,omitempty"`
 	Name        string  `json:"name"`
+	FullName    string  `json:"fullName,omitempty"`
 	Description string  `json:"description"`
 	Expence     bool    `json:"expence"`
 }
@@ -21,6 +22,7 @@ func (c *Category) UnmarshalJSON(data []byte) error {
 		CategoryID  string `json:"categoryId,omitempty"`
 		ParentID    string `json:"parentId,omitempty"`
 		Name        string `json:"name"`
+		FullName    string `json:"fullName,omitempty"`
 		Description string `json:"description"`
 		Expence     bool   `json:"expence"`
 	}
@@ -42,6 +44,7 @@ func (c *Category) UnmarshalJSON(data []byte) error {
 		c.ParentID = &tmp.ParentID
 	}
 	c.Name = tmp.Name
+	c.FullName = tmp.FullName
 	c.Description = tmp.Description
 	c.Expence = tmp.Expence
 

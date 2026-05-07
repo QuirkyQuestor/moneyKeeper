@@ -21,6 +21,7 @@ CREATE TABLE account (
     name VARCHAR(40) NOT NULL,
     description VARCHAR(200),
     active BOOLEAN DEFAULT TRUE,
+    is_external BOOLEAN DEFAULT FALSE,
     UNIQUE(user_id, name)
 );
 

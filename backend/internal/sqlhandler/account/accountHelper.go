@@ -22,7 +22,7 @@ var (
 func GetAllAccounts(DBConnection *sql.DB, userID string) ([]datamodel.Account, error) {
 	var accounts = []datamodel.Account{}
 
-	bdStatement, err := DBConnection.Prepare("SELECT account_id, type_id, name, description, active FROM account WHERE user_id = $1;")
+	bdStatement, err := DBConnection.Prepare("SELECT account_id, type_id, name, description, active, is_external FROM account WHERE user_id = $1;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return accounts, ErrCannotPrepareSQLStatement
@@ -44,8 +44,9 @@ func GetAllAccounts(DBConnection *sql.DB, userID string) ([]datamodel.Account, e
 		var name string
 		var description sql.NullString
 		var active bool
+		var isExternal bool
 
-		err = rows.Scan(&accountId, &typeId, &name, &description, &active)
+		err = rows.Scan(&accountId, &typeId, &name, &description, &active, &isExternal)
 		if err != nil {
 			slog.Error(ErrConvertingDBResponse.Error(), "error", err)
 			return accounts, ErrConvertingDBResponse
@@ -57,6 +58,7 @@ func GetAllAccounts(DBConnection *sql.DB, userID string) ([]datamodel.Account, e
 			Name:        name,
 			Description: description.String,
 			Active:      active,
+			IsExternal:  isExternal,
 		}
 		accounts = append(accounts, account)
 		slog.Info("Got this...", "account", account)
@@ -66,7 +68,7 @@ func GetAllAccounts(DBConnection *sql.DB, userID string) ([]datamodel.Account, e
 func AddAccount(DBConnection *sql.DB, userID string, account datamodel.Account) (datamodel.Account, error) {
 	slog.Info("Received Account object", "incomming_account", account)
 
-	bdStatement, err := DBConnection.Prepare("INSERT INTO account(user_id, type_id, name, description, active) VALUES ($1, $2, $3, $4, $5) RETURNING account_id;")
+	bdStatement, err := DBConnection.Prepare("INSERT INTO account(user_id, type_id, name, description, active, is_external) VALUES ($1, $2, $3, $4, $5, $6) RETURNING account_id;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return account, ErrCannotPrepareSQLStatement
@@ -74,7 +76,7 @@ func AddAccount(DBConnection *sql.DB, userID string, account datamodel.Account) 
 
 	defer bdStatement.Close()
 
-	err = bdStatement.QueryRow(userID, account.TypeID, account.Name, account.Description, account.Active).Scan(&account.AccountID)
+	err = bdStatement.QueryRow(userID, account.TypeID, account.Name, account.Description, account.Active, account.IsExternal).Scan(&account.AccountID)
 
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
@@ -91,7 +93,7 @@ func AddAccount(DBConnection *sql.DB, userID string, account datamodel.Account) 
 func GetAccountByID(DBConnection *sql.DB, userID string, accountID string) (datamodel.Account, error) {
 	var account datamodel.Account
 
-	bdStatement, err := DBConnection.Prepare("SELECT account_id, type_id, name, description, active FROM account WHERE account_id = $1 AND user_id = $2;")
+	bdStatement, err := DBConnection.Prepare("SELECT account_id, type_id, name, description, active, is_external FROM account WHERE account_id = $1 AND user_id = $2;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return account, ErrCannotPrepareSQLStatement
@@ -104,8 +106,9 @@ func GetAccountByID(DBConnection *sql.DB, userID string, accountID string) (data
 	var name string
 	var description sql.NullString
 	var active bool
+	var isExternal bool
 
-	err = bdStatement.QueryRow(accountID, userID).Scan(&accountId, &typeId, &name, &description, &active)
+	err = bdStatement.QueryRow(accountID, userID).Scan(&accountId, &typeId, &name, &description, &active, &isExternal)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -121,6 +124,7 @@ func GetAccountByID(DBConnection *sql.DB, userID string, accountID string) (data
 		Name:        name,
 		Description: description.String,
 		Active:      active,
+		IsExternal:  isExternal,
 	}
 
 	return account, nil
@@ -128,13 +132,13 @@ func GetAccountByID(DBConnection *sql.DB, userID string, accountID string) (data
 
 func UpdateAccountByID(DBConnection *sql.DB, userID string, accountUpd *datamodel.Account) error {
 
-	bdStatement, err := DBConnection.Prepare("UPDATE account SET type_id=$1, name=$2, description=$3, active=$4 WHERE account_id = $5 AND user_id = $6")
+	bdStatement, err := DBConnection.Prepare("UPDATE account SET type_id=$1, name=$2, description=$3, active=$4, is_external=$5 WHERE account_id = $6 AND user_id = $7")
 	if err != nil {
 		slog.Error("cannot prepare update statement", "error", err)
 		return err
 	}
 	defer bdStatement.Close()
-	result, err := bdStatement.Exec(accountUpd.TypeID, accountUpd.Name, accountUpd.Description, accountUpd.Active, accountUpd.AccountID, userID)
+	result, err := bdStatement.Exec(accountUpd.TypeID, accountUpd.Name, accountUpd.Description, accountUpd.Active, accountUpd.IsExternal, accountUpd.AccountID, userID)
 
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)

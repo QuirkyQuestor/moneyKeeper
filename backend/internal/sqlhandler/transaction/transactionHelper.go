@@ -20,20 +20,27 @@ var (
 	ErrNoItemResponse            = errors.New("DB query returned no result")
 )
 
-func GetAllTransactions(DBConnection *sql.DB, userID string) ([]datamodel.Transaction, error) {
+func GetAllTransactions(DBConnection *sql.DB, userID string, limit, offset int) ([]datamodel.Transaction, int, error) {
 	var transactions = []datamodel.Transaction{}
 
-	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM transaction WHERE user_id = $1;")
+	var totalCount int
+	err := DBConnection.QueryRow("SELECT COUNT(*) FROM transaction WHERE user_id = $1", userID).Scan(&totalCount)
+	if err != nil {
+		slog.Error("Could not get total count of transactions", "error", err)
+		return nil, 0, err
+	}
+
+	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM transaction WHERE user_id = $1 ORDER BY date DESC LIMIT $2 OFFSET $3;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
-		return transactions, ErrCannotPrepareSQLStatement
+		return transactions, 0, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
-	rows, err := bdStatement.Query(userID)
+	rows, err := bdStatement.Query(userID, limit, offset)
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
-		return nil, ErrSQLExecution
+		return nil, 0, ErrSQLExecution
 	}
 	defer rows.Close()
 
@@ -63,23 +70,30 @@ func GetAllTransactions(DBConnection *sql.DB, userID string) ([]datamodel.Transa
 		}
 		transactions = append(transactions, transaction)
 	}
-	return transactions, nil
+	return transactions, totalCount, nil
 }
 
-func GetTransactionsByAccountId(DBConnection *sql.DB, userID string, accountFrom string) ([]datamodel.Transaction, error) {
+func GetTransactionsByAccountId(DBConnection *sql.DB, userID string, accountFrom string, limit, offset int) ([]datamodel.Transaction, int, error) {
 	var transactions = []datamodel.Transaction{}
 
-	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM transaction WHERE account_from = $1 AND user_id = $2;")
+	var totalCount int
+	err := DBConnection.QueryRow("SELECT COUNT(*) FROM transaction WHERE account_from = $1 AND user_id = $2", accountFrom, userID).Scan(&totalCount)
+	if err != nil {
+		slog.Error("Could not get total count of transactions for account", "error", err)
+		return nil, 0, err
+	}
+
+	bdStatement, err := DBConnection.Prepare("SELECT transaction_id, account_from, date, amount, account_to, memo, category_id, transfer_transaction_id FROM transaction WHERE account_from = $1 AND user_id = $2 ORDER BY date DESC LIMIT $3 OFFSET $4;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
-		return transactions, ErrCannotPrepareSQLStatement
+		return transactions, 0, ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
-	rows, err := bdStatement.Query(accountFrom, userID)
+	rows, err := bdStatement.Query(accountFrom, userID, limit, offset)
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)
-		return nil, ErrSQLExecution
+		return nil, 0, ErrSQLExecution
 	}
 	defer rows.Close()
 
@@ -109,7 +123,7 @@ func GetTransactionsByAccountId(DBConnection *sql.DB, userID string, accountFrom
 		}
 		transactions = append(transactions, transaction)
 	}
-	return transactions, nil
+	return transactions, totalCount, nil
 }
 
 func AddTransaction(DBConnection *sql.DB, userID string, transaction datamodel.Transaction) (datamodel.Transaction, error) {

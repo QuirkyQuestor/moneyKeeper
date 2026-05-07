@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,6 +21,7 @@ import (
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/account"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/accountType"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/category"
+	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/reports"
 	"github.com/QuirkyQuestor/moneyKeeper/internal/sqlhandler/transaction"
 	"github.com/lib/pq"
 	"log/slog"
@@ -469,7 +471,26 @@ func deleteCategorybyIDHandler(w http.ResponseWriter, r *http.Request) {
 func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 	queries := r.URL.Query()
 	userID := r.Context().Value("user_id").(string)
-	if accountFrom, ok := queries["accountFrom"]; ok {
+
+	limitStr := queries.Get("limit")
+	offsetStr := queries.Get("offset")
+
+	limit := 50
+	offset := 0
+
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+		limit = l
+	}
+	if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
+		offset = o
+	}
+
+	type paginatedResponse struct {
+		Transactions []datamodel.Transaction `json:"transactions"`
+		TotalCount   int                    `json:"totalCount"`
+	}
+
+	if accountFrom, ok := queries["accountFrom"]; ok && accountFrom[0] != "" {
 		// Check here if `accountFrom` is in valid format
 		var re = regexp.MustCompile(`[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
 
@@ -479,24 +500,24 @@ func getTransactionsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		transactions, err := transaction.GetTransactionsByAccountId(DBConnection, userID, accountFrom[0])
+		transactions, totalCount, err := transaction.GetTransactionsByAccountId(DBConnection, userID, accountFrom[0], limit, offset)
 		if err != nil {
 			slog.Error("Could not do GetTransactionByID", "accountFrom", accountFrom[0], "error", err)
 			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 			return
 		}
-		respondWithJSON(w, http.StatusOK, transactions)
+		respondWithJSON(w, http.StatusOK, paginatedResponse{Transactions: transactions, TotalCount: totalCount})
 		return
 
 	} else {
 		// Get transaction from DB
-		transactions, err := transaction.GetAllTransactions(DBConnection, userID)
+		transactions, totalCount, err := transaction.GetAllTransactions(DBConnection, userID, limit, offset)
 		if err != nil {
 			slog.Error("Could not do GetAllTransactions", "error", err)
 			respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 			return
 		}
-		respondWithJSON(w, http.StatusOK, transactions)
+		respondWithJSON(w, http.StatusOK, paginatedResponse{Transactions: transactions, TotalCount: totalCount})
 		return
 
 	}
@@ -514,7 +535,6 @@ func addTransactionHandler(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Need the response body", "IncominBody", r.Body)
 
 	if newTransaction.AccountFrom == "" ||
-		newTransaction.AccountTo == "" ||
 		newTransaction.CategoryID == "" ||
 		newTransaction.Amount == 0 ||
 		newTransaction.Date == nil {
@@ -603,6 +623,36 @@ func deleteTransactionByIDHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusNoContent, nil)
 }
 
+func getReportsHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("user_id").(string)
+
+	expenses, err := reports.GetExpensesByCategory(DBConnection, userID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get category reports")
+		return
+	}
+
+	monthly, err := reports.GetMonthlyIncomeVsExpenses(DBConnection, userID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get monthly reports")
+		return
+	}
+
+	networth, err := reports.GetNetWorthTrend(DBConnection, userID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get net worth reports")
+		return
+	}
+
+	summary := reports.ReportsSummary{
+		ExpensesByCategory: expenses,
+		MonthlyComparison:  monthly,
+		NetWorthTrend:      networth,
+	}
+
+	respondWithJSON(w, http.StatusOK, summary)
+}
+
 func main() {
 	DBConnection = sqlhandler.DBConnect()
 	defer DBConnection.Close()
@@ -670,6 +720,8 @@ func main() {
 		r.Get("/api/transaction/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", getTransactionByIDHandler)       // GET single transaction info
 		r.Put("/api/transaction/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", updateTransactionByIDHandler)    // PUT update transaction
 		r.Delete("/api/transaction/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", deleteTransactionByIDHandler) // DELETE transaction
+
+		r.Get("/api/reports", getReportsHandler)
 	})
 
 	slog.Info("Starting MoneyKeeper backend!")

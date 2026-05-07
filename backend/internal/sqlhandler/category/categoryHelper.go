@@ -21,7 +21,22 @@ var (
 
 func GetAllCategories(DBConnection *sql.DB, userID string) ([]datamodel.Category, error) {
 	var categories = []datamodel.Category{}
-	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM category WHERE user_id = $1")
+	query := `
+		WITH RECURSIVE category_path AS (
+			SELECT category_id, parent_id, name, name::TEXT AS full_name, description, expence, user_id
+			FROM category
+			WHERE parent_id IS NULL AND user_id = $1
+			UNION ALL
+			SELECT c.category_id, c.parent_id, c.name, cp.full_name || ': ' || c.name, c.description, c.expence, c.user_id
+			FROM category c
+			JOIN category_path cp ON c.parent_id = cp.category_id
+			WHERE c.user_id = $1
+		)
+		SELECT category_id, parent_id, name, full_name, description, expence
+		FROM category_path
+		ORDER BY full_name;
+	`
+	bdStatement, err := DBConnection.Prepare(query)
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return categories, ErrCannotPrepareSQLStatement
@@ -39,16 +54,19 @@ func GetAllCategories(DBConnection *sql.DB, userID string) ([]datamodel.Category
 		var categoryId *string
 		var parentId *string
 		var name string
+		var fullName string
 		var description sql.NullString
 		var expence bool
-		err := rows.Scan(&categoryId, &parentId, &name, &description, &expence)
+		err := rows.Scan(&categoryId, &parentId, &name, &fullName, &description, &expence)
 		if err != nil {
-			slog.Error("Cold not parse row from the DB", "error", err)
+			slog.Error("Could not parse row from the DB", "error", err)
+			continue
 		}
 		category := datamodel.Category{
 			CategoryID:  categoryId,
 			ParentID:    parentId,
 			Name:        name,
+			FullName:    fullName,
 			Description: description.String,
 			Expence:     expence,
 		}
