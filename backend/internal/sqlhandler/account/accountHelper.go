@@ -174,3 +174,49 @@ func DeleteAccountByID(DBConnection *sql.DB, userID string, accountID string) er
 	}
 	return nil
 }
+
+func GetAccountBalances(DBConnection *sql.DB, userID string) ([]datamodel.AccountBalance, error) {
+	var balances []datamodel.AccountBalance
+
+	query := `
+		SELECT a.account_id, a.name, COALESCE(SUM(t.amount), 0) as balance
+		FROM account a
+		LEFT JOIN transaction t ON a.account_id = t.account_from
+		WHERE a.user_id = $1 AND a.is_external = false
+		GROUP BY a.account_id, a.name
+		ORDER BY a.name ASC;
+	`
+
+	rows, err := DBConnection.Query(query, userID)
+	if err != nil {
+		slog.Error("Error querying account balances", "error", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var b datamodel.AccountBalance
+		if err := rows.Scan(&b.AccountID, &b.Name, &b.Balance); err != nil {
+			slog.Error("Error scanning account balance row", "error", err)
+			continue
+		}
+		balances = append(balances, b)
+	}
+
+	return balances, nil
+}
+
+func GetAccountBalanceByID(DBConnection *sql.DB, userID string, accountID string) (float64, error) {
+	var balance float64
+	query := `
+		SELECT COALESCE(SUM(amount), 0) 
+		FROM transaction 
+		WHERE account_from = $1 AND user_id = $2
+	`
+	err := DBConnection.QueryRow(query, accountID, userID).Scan(&balance)
+	if err != nil {
+		slog.Error("Error querying single account balance", "error", err, "accountID", accountID)
+		return 0, err
+	}
+	return balance, nil
+}

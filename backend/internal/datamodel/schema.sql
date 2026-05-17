@@ -32,7 +32,7 @@ CREATE TABLE category (
     parent_id UUID REFERENCES category(category_id),
     name VARCHAR(40) NOT NULL,
     description VARCHAR(200),
-    expence BOOLEAN DEFAULT TRUE,
+    expense BOOLEAN DEFAULT TRUE,
     UNIQUE(user_id, name)
 );
 

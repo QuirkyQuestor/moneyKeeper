@@ -172,6 +172,29 @@ func getAllAccountsHandler(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, accounts)
 }
 
+func getAccountBalancesHandler(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("user_id").(string)
+	balances, err := account.GetAccountBalances(DBConnection, userID)
+	if err != nil {
+		slog.Error("An error has happened during GetAccountBalances DB query", "error", err)
+		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		return
+	}
+	respondWithJSON(w, http.StatusOK, balances)
+}
+
+func getAccountBalanceByIDHandler(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+	userID := r.Context().Value("user_id").(string)
+	balance, err := account.GetAccountBalanceByID(DBConnection, userID, idParam)
+	if err != nil {
+		slog.Error("An error has happened during GetAccountBalanceByID DB query", "error", err)
+		respondWithError(w, http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		return
+	}
+	respondWithJSON(w, http.StatusOK, map[string]float64{"balance": balance})
+}
+
 func addNewAccountHandler(w http.ResponseWriter, r *http.Request) {
 	d := json.NewDecoder(r.Body)
 	slog.Info("Incoming body string", "d", d)
@@ -440,7 +463,7 @@ func updateCategoryByIDHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, http.StatusText(http.StatusBadRequest))
 		return
 	}
-	*categoryUpd.CategoryID = idParam
+	categoryUpd.CategoryID = &idParam
 	userID := r.Context().Value("user_id").(string)
 	err = category.UpdateCategory(DBConnection, userID, categoryUpd)
 
@@ -698,6 +721,8 @@ func main() {
 		r.Get("/api/me", meHandler)
 
 		r.Get("/api/account", getAllAccountsHandler)                                                                                    // Handle Accout requests: GET ALL accounts
+		r.Get("/api/account/balances", getAccountBalancesHandler)                                                                       // Handle Accout requests: GET account balances
+		r.Get("/api/account/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}/balance", getAccountBalanceByIDHandler) // Handle Account requests: GET account balance
 		r.Post("/api/account", addNewAccountHandler)                                                                                    // Handle Accout requests: POST new account
 		r.Get("/api/account/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", getAccountByIDHandler)   // Handle Account requests: GET single specified account
 		r.Put("/api/account/{id:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}}", updateAccountHandler)    // Handle Account requests: PUT to update account

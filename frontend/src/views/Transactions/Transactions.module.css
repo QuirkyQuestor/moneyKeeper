@@ -14,6 +14,41 @@
   box-shadow: var(--shadow-1);
 }
 
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.balanceDisplay {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface-2);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+}
+
+.balanceLabel {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.positiveBalance {
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.negativeBalance {
+  color: #ef4444;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
 .selectGroup {
   display: flex;
   align-items: center;

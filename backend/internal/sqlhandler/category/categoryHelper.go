@@ -23,16 +23,16 @@ func GetAllCategories(DBConnection *sql.DB, userID string) ([]datamodel.Category
 	var categories = []datamodel.Category{}
 	query := `
 		WITH RECURSIVE category_path AS (
-			SELECT category_id, parent_id, name, name::TEXT AS full_name, description, expence, user_id
+			SELECT category_id, parent_id, name, name::TEXT AS full_name, description, expense, user_id
 			FROM category
 			WHERE parent_id IS NULL AND user_id = $1
 			UNION ALL
-			SELECT c.category_id, c.parent_id, c.name, cp.full_name || ': ' || c.name, c.description, c.expence, c.user_id
+			SELECT c.category_id, c.parent_id, c.name, cp.full_name || ': ' || c.name, c.description, c.expense, c.user_id
 			FROM category c
 			JOIN category_path cp ON c.parent_id = cp.category_id
 			WHERE c.user_id = $1
 		)
-		SELECT category_id, parent_id, name, full_name, description, expence
+		SELECT category_id, parent_id, name, full_name, description, expense
 		FROM category_path
 		ORDER BY full_name;
 	`
@@ -56,8 +56,8 @@ func GetAllCategories(DBConnection *sql.DB, userID string) ([]datamodel.Category
 		var name string
 		var fullName string
 		var description sql.NullString
-		var expence bool
-		err := rows.Scan(&categoryId, &parentId, &name, &fullName, &description, &expence)
+		var expense bool
+		err := rows.Scan(&categoryId, &parentId, &name, &fullName, &description, &expense)
 		if err != nil {
 			slog.Error("Could not parse row from the DB", "error", err)
 			continue
@@ -68,7 +68,7 @@ func GetAllCategories(DBConnection *sql.DB, userID string) ([]datamodel.Category
 			Name:        name,
 			FullName:    fullName,
 			Description: description.String,
-			Expence:     expence,
+			Expense:     expense,
 		}
 		categories = append(categories, category)
 	}
@@ -78,7 +78,7 @@ func GetAllCategories(DBConnection *sql.DB, userID string) ([]datamodel.Category
 func AddCategory(DBConnection *sql.DB, userID string, category *datamodel.Category) error {
 	slog.Info("The Category object", "category", category)
 
-	bdStatement, err := DBConnection.Prepare("INSERT INTO category(user_id, parent_id, name, description, expence) VALUES ($1, $2, $3, $4, $5) RETURNING category_id;")
+	bdStatement, err := DBConnection.Prepare("INSERT INTO category(user_id, parent_id, name, description, expense) VALUES ($1, $2, $3, $4, $5) RETURNING category_id;")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
@@ -86,7 +86,7 @@ func AddCategory(DBConnection *sql.DB, userID string, category *datamodel.Catego
 
 	defer bdStatement.Close()
 
-	err = bdStatement.QueryRow(userID, category.ParentID, category.Name, category.Description, category.Expence).Scan(&category.CategoryID)
+	err = bdStatement.QueryRow(userID, category.ParentID, category.Name, category.Description, category.Expense).Scan(&category.CategoryID)
 
 	if err != nil {
 		if err, ok := err.(*pq.Error); ok {
@@ -104,14 +104,14 @@ func AddCategory(DBConnection *sql.DB, userID string, category *datamodel.Catego
 func GetCategoryByID(DBConnection *sql.DB, userID string, categoryID string) (datamodel.Category, error) {
 
 	var category datamodel.Category
-	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expence FROM category WHERE category_id = $1 AND user_id = $2")
+	bdStatement, err := DBConnection.Prepare("SELECT category_id, parent_id, name, description, expense FROM category WHERE category_id = $1 AND user_id = $2")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return category, ErrCannotPrepareSQLStatement
 	}
 	defer bdStatement.Close()
 
-	err = bdStatement.QueryRow(categoryID, userID).Scan(&category.CategoryID, &category.ParentID, &category.Name, &category.Description, &category.Expence)
+	err = bdStatement.QueryRow(categoryID, userID).Scan(&category.CategoryID, &category.ParentID, &category.Name, &category.Description, &category.Expense)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -127,14 +127,14 @@ func GetCategoryByID(DBConnection *sql.DB, userID string, categoryID string) (da
 
 func UpdateCategory(DBConnection *sql.DB, userID string, category *datamodel.Category) error {
 	slog.Info("The Category object", "category", category)
-	bdStatement, err := DBConnection.Prepare("UPDATE category SET parent_id=$1, name=$2, description=$3, expence=$4 WHERE category_id = $5 AND user_id = $6")
+	bdStatement, err := DBConnection.Prepare("UPDATE category SET parent_id=$1, name=$2, description=$3, expense=$4 WHERE category_id = $5 AND user_id = $6")
 	if err != nil {
 		slog.Error(ErrCannotPrepareSQLStatement.Error(), "error", err)
 		return ErrCannotPrepareSQLStatement
 	}
 
 	defer bdStatement.Close()
-	result, err := bdStatement.Exec(category.ParentID, category.Name, category.Description, category.Expence, category.CategoryID, userID)
+	result, err := bdStatement.Exec(category.ParentID, category.Name, category.Description, category.Expense, category.CategoryID, userID)
 
 	if err != nil {
 		slog.Error(ErrSQLExecution.Error(), "error", err)

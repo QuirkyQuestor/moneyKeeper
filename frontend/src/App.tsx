@@ -5,11 +5,12 @@ import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Transactions from './views/Transactions/Transactions';
 import Login from './views/Login/Login';
-import WIP from './views/WIP/WIP';
 import AccountTypes from './views/AccountTypes/AccountTypes';
 import Accounts from './views/Accounts/Accounts';
 import Categories from './views/Categories/Categories';
 import Reports from './views/Reports/Reports';
+
+import Home from './views/Home/Home';
 
 const App: React.FC = () => {
   return (
@@ -20,6 +21,12 @@ const App: React.FC = () => {
             <Route path="login" element={<Login />} />
             
             <Route index element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            } />
+
+            <Route path="transactions" element={
               <ProtectedRoute>
                 <Transactions />
               </ProtectedRoute>

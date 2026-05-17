@@ -8,7 +8,7 @@ interface Category {
   name: string;
   fullName: string;
   description: string;
-  expence: boolean;
+  expense: boolean;
 }
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -21,7 +21,7 @@ const Categories: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', parentId: '', expence: true });
+  const [formData, setFormData] = useState({ name: '', description: '', parentId: '', expense: true });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,7 +103,7 @@ const Categories: React.FC = () => {
         <h2>Categories</h2>
         <button className={styles.addButton} onClick={() => { 
           setEditingCategory(null); 
-          setFormData({name: '', description: '', parentId: '', expence: true}); 
+          setFormData({name: '', description: '', parentId: '', expense: true}); 
           setError(null);
           setIsModalOpen(true); 
         }}>+ Add Category</button>
@@ -117,11 +117,11 @@ const Categories: React.FC = () => {
               <tr key={c.categoryId}>
                 <td>{c.fullName}</td>
                 <td>{c.description}</td>
-                <td>{c.expence ? 'Expense' : 'Income'}</td>
+                <td>{c.expense ? 'Expense' : 'Income'}</td>
                 <td className={styles.actionCell}>
                   <button className={styles.iconButton} onClick={() => { 
                     setEditingCategory(c); 
-                    setFormData({name: c.name, description: c.description, parentId: c.parentId || '', expence: c.expence}); 
+                    setFormData({name: c.name, description: c.description, parentId: c.parentId || '', expense: c.expense}); 
                     setError(null);
                     setIsModalOpen(true); 
                   }}><EditIcon /></button>
@@ -150,8 +150,8 @@ const Categories: React.FC = () => {
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
             <input 
               type="checkbox" 
-              checked={formData.expence} 
-              onChange={e => setFormData({...formData, expence: e.target.checked})} 
+              checked={formData.expense} 
+              onChange={e => setFormData({...formData, expense: e.target.checked})} 
             />
             Expense
           </label>

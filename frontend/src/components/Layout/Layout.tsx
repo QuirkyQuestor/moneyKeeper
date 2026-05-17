@@ -8,7 +8,8 @@ const Layout: React.FC = () => {
   const navigate = useNavigate();
 
   const navItems = [
-    { name: 'Transactions', path: '/' },
+    { name: 'Home', path: '/' },
+    { name: 'Transactions', path: '/transactions' },
     { name: 'Categories', path: '/categories' },
     { name: 'Accounts', path: '/accounts' },
     { name: 'Account Types', path: '/account-types' },

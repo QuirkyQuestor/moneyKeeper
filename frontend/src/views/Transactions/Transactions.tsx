@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import styles from './Transactions.module.css';
 import Modal from '../../components/Modal/Modal';
 
@@ -11,7 +12,7 @@ interface Account {
 interface Category {
   categoryId: string;
   fullName: string;
-  expence: boolean;
+  expense: boolean;
 }
 
 interface Transaction {
@@ -36,6 +37,7 @@ const EditIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="non
 const DeleteIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>;
 
 const Transactions: React.FC = () => {
+  const location = useLocation();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
@@ -44,11 +46,23 @@ const Transactions: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  // Separate effect to handle location state initialization
+  useEffect(() => {
+    if (location.state?.selectedAccountId) {
+      setSelectedAccountId(location.state.selectedAccountId);
+      // Clear location state to prevent it from re-applying on refresh
+      window.history.replaceState({}, document.title);
+    }
+    setIsInitialized(true);
+  }, [location.state]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [currentBalance, setCurrentBalance] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -82,6 +96,21 @@ const Transactions: React.FC = () => {
     }
   }, [selectedAccountId, currentPage]);
 
+  const fetchBalance = useCallback(async () => {
+    if (!selectedAccountId) {
+      setCurrentBalance(null);
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/account/${selectedAccountId}/balance`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch balance');
+      const data = await response.json();
+      setCurrentBalance(data.balance);
+    } catch (err) {
+      console.error('Error fetching balance:', err);
+    }
+  }, [selectedAccountId]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -97,6 +126,7 @@ const Transactions: React.FC = () => {
         
         setAccounts(accData);
         setCategories(catData);
+
       } catch (err) {
         console.error('Error fetching auxiliary data:', err);
         setError('Error connecting to API. Please ensure the backend is running.');
@@ -107,8 +137,11 @@ const Transactions: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    if (isInitialized) {
+      fetchTransactions();
+      fetchBalance();
+    }
+  }, [fetchTransactions, fetchBalance, isInitialized]);
 
   const handleSave = async () => {
     try {
@@ -119,16 +152,40 @@ const Transactions: React.FC = () => {
       
       const category = categories.find(c => c.categoryId === formData.categoryId);
       let amount = Math.abs(parseFloat(formData.amount.toString()));
-      if (category && category.expence) {
-        amount = -amount;
-      }
       
-      const payload = {
+      let payload: any = {
         ...formData,
-        amount,
         date: new Date(formData.date).toISOString(),
-        accountTo: formData.accountTo
       };
+
+      if (formData.isTransfer) {
+        // For transfers, we want to maintain the "Source -> Destination" logic
+        // but ensure the record stays in its original account if we are editing.
+        if (editingTransaction) {
+          // If we are editing the "Destination" side (the one that was positive),
+          // we must send the amount as positive and swap From/To in the payload
+          // to match the record's actual owner (accountFrom).
+          const wasDestination = editingTransaction.amount > 0;
+          if (wasDestination) {
+            payload.amount = amount; // Positive
+            payload.accountFrom = editingTransaction.accountFrom;
+            payload.accountTo = editingTransaction.accountTo;
+          } else {
+            payload.amount = -amount; // Negative (Source)
+            payload.accountFrom = formData.accountFrom;
+            payload.accountTo = formData.accountTo;
+          }
+        } else {
+          // New transfer: accountFrom is the source (negative)
+          payload.amount = -amount;
+        }
+      } else {
+        // Regular transaction
+        if (category && category.expense) {
+          amount = -amount;
+        }
+        payload.amount = amount;
+      }
 
       const response = await fetch(url, {
         method,
@@ -141,6 +198,7 @@ const Transactions: React.FC = () => {
 
       setIsModalOpen(false);
       fetchTransactions();
+      fetchBalance();
     } catch (err) {
       console.error('Error saving transaction:', err);
       alert('Failed to save transaction.');
@@ -157,6 +215,7 @@ const Transactions: React.FC = () => {
       if (!response.ok) throw new Error('Failed to delete transaction');
       setIsDeleteModalOpen(false);
       fetchTransactions();
+      fetchBalance();
     } catch (err) {
       console.error('Error deleting transaction:', err);
       alert('Failed to delete transaction.');
@@ -180,14 +239,21 @@ const Transactions: React.FC = () => {
   const openEditModal = (tx: Transaction) => {
     setEditingTransaction(tx);
     const targetAccount = accounts.find(a => a.accountId === tx.accountTo);
+    const isTransfer = targetAccount ? !targetAccount.isExternal : false;
+    
+    // If it's a transfer and we are looking at the destination side (amount > 0),
+    // we swap them so the modal always shows "Source -> Destination"
+    const displayAccountFrom = (isTransfer && tx.amount > 0) ? tx.accountTo : tx.accountFrom;
+    const displayAccountTo = (isTransfer && tx.amount > 0) ? tx.accountFrom : tx.accountTo;
+
     setFormData({
       date: tx.date ? tx.date.split('T')[0] : new Date().toISOString().split('T')[0],
       memo: tx.memo,
       amount: Math.abs(tx.amount),
       categoryId: tx.categoryId,
-      accountFrom: tx.accountFrom,
-      accountTo: tx.accountTo,
-      isTransfer: targetAccount ? !targetAccount.isExternal : false
+      accountFrom: displayAccountFrom,
+      accountTo: displayAccountTo,
+      isTransfer: isTransfer
     });
     setIsModalOpen(true);
   };
@@ -199,24 +265,34 @@ const Transactions: React.FC = () => {
       {error && <div style={{ color: '#ef4444', marginBottom: '1rem' }}>{error}</div>}
       
       <div className={styles.controls}>
-        <div className={styles.selectGroup}>
-          <label htmlFor="account-select">Account:</label>
-          <select 
-            id="account-select" 
-            className={styles.select}
-            value={selectedAccountId}
-            onChange={(e) => {
-              setSelectedAccountId(e.target.value);
-              setCurrentPage(0);
-            }}
-          >
-            <option value="">All Accounts</option>
-            {accounts.filter(a => !a.isExternal).map(account => (
-              <option key={account.accountId} value={account.accountId}>
-                {account.name}
-              </option>
-            ))}
-          </select>
+        <div className={styles.headerLeft}>
+          <div className={styles.selectGroup}>
+            <label htmlFor="account-select">Account:</label>
+            <select 
+              id="account-select" 
+              className={styles.select}
+              value={selectedAccountId}
+              onChange={(e) => {
+                setSelectedAccountId(e.target.value);
+                setCurrentPage(0);
+              }}
+            >
+              <option value="">All Accounts</option>
+              {accounts.filter(a => !a.isExternal).map(account => (
+                <option key={account.accountId} value={account.accountId}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {currentBalance !== null && (
+            <div className={styles.balanceDisplay}>
+              <span className={styles.balanceLabel}>Balance:</span>
+              <span className={currentBalance >= 0 ? styles.positiveBalance : styles.negativeBalance}>
+                ${currentBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          )}
         </div>
         <button className={styles.addButton} onClick={openAddModal}>+ Add Transaction</button>
       </div>

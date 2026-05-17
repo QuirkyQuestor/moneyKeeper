@@ -13,7 +13,7 @@ type Category struct {
 	Name        string  `json:"name"`
 	FullName    string  `json:"fullName,omitempty"`
 	Description string  `json:"description"`
-	Expence     bool    `json:"expence"`
+	Expense     bool    `json:"expense"`
 }
 
 func (c *Category) UnmarshalJSON(data []byte) error {
@@ -24,7 +24,7 @@ func (c *Category) UnmarshalJSON(data []byte) error {
 		Name        string `json:"name"`
 		FullName    string `json:"fullName,omitempty"`
 		Description string `json:"description"`
-		Expence     bool   `json:"expence"`
+		Expense     bool   `json:"expense"`
 	}
 
 	var tmp categoryTmp
@@ -46,7 +46,7 @@ func (c *Category) UnmarshalJSON(data []byte) error {
 	c.Name = tmp.Name
 	c.FullName = tmp.FullName
 	c.Description = tmp.Description
-	c.Expence = tmp.Expence
+	c.Expense = tmp.Expense
 
 	slog.Info("unmarshaling", "c", c)
 	return nil
